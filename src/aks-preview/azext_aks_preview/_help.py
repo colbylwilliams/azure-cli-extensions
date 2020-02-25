@@ -126,6 +126,7 @@ helps['aks create'] = """
             These addons are available:
                 http_application_routing  - configure ingress with automatic public DNS name creation.
                 monitoring                - turn on Log Analytics monitoring. Uses the Log Analytics Default Workspace if it exists, else creates one. Specify "--workspace-resource-id" to use an existing workspace.
+                                            If monitoring addon is enabled --no-wait argument will have no effect
                 virtual-node              - enable AKS Virtual Node (PREVIEW). Requires --subnet-name to provide the name of an existing subnet for the Virtual Node to use.
                 azure-policy              - enable Azure policy (PREVIEW).
                 ingress-appgw             - enable Applicaiton Gateway Ingress Controller addon (PREVIEW).
@@ -178,6 +179,9 @@ helps['aks create'] = """
         - name: --max-count
           type: int
           short-summary: Maximum nodes count used for autoscaler, when "--enable-cluster-autoscaler" specified. Please specifying the value in the range of [1, 100].
+        - name: --cluster-autoscaler-profile
+          type: list
+          short-summary: Space-separated list of key=value pairs for configuring cluster autoscaler. Pass an empty string to clear the profile.
         - name: --vm-set-type
           type: string
           short-summary: Agent pool vm set type. VirtualMachineScaleSets or AvailabilitySet.
@@ -295,6 +299,9 @@ helps['aks update'] = """
         - name: --max-count
           type: int
           short-summary: Maximum nodes count used for autoscaler, when "--enable-cluster-autoscaler" specified. Please specifying the value in the range of [1, 100]
+        - name: --cluster-autoscaler-profile
+          type: list
+          short-summary: Space-separated list of key=value pairs for configuring cluster autoscaler. Pass an empty string to clear the profile.
         - name: --load-balancer-managed-outbound-ip-count
           type: int
           short-summary: Load balancer managed outbound IP count.
@@ -540,6 +547,7 @@ long-summary: |-
     These addons are available:
         http_application_routing  - configure ingress with automatic public DNS name creation.
         monitoring                - turn on Log Analytics monitoring. Uses the Log Analytics Default Workspace if it exists, else creates one. Specify "--workspace-resource-id" to use an existing workspace.
+                                    If monitoring addon is enabled --no-wait argument will have no effect
         virtual-node              - enable AKS Virtual Node (PREVIEW). Requires --subnet-name to provide the name of an existing subnet for the Virtual Node to use.
         azure-policy              - enable Azure policy (PREVIEW).
         ingress-appgw             - enable Application Gateway Ingress Controller addon (PREVIEW).
