@@ -21,6 +21,19 @@ def load_command_table(self, _):
         client_factory=cf_tc)
 
     # ----------------
+    # TeamCloud
+    # ----------------
+
+    with self.command_group('tc', is_preview=True):
+        pass
+
+    with self.command_group('tc', tc_sdk, client_factory=cf_tc) as g:
+        g.custom_command('create', 'teamcloud_create',
+                         transform=transform_output)
+        g.custom_command('status', 'status_get',
+                         transform=transform_output)
+
+    # ----------------
     # TeamCloud Users
     # ----------------
 
@@ -89,14 +102,3 @@ def load_command_table(self, _):
                          transform=transform_output, table_transformer=transform_provider_table_output)
         g.custom_show_command('show', 'provider_get',
                               transform=transform_output)
-
-    # ----------------
-    # Status
-    # ----------------
-
-    with self.command_group('tc', tc_sdk, client_factory=cf_tc) as g:
-        g.custom_command('status', 'status_get',
-                         transform=transform_output)
-
-    with self.command_group('tc', is_preview=True):
-        pass

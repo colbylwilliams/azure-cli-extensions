@@ -23,10 +23,24 @@ STATUS_POLLING_SLEEP_INTERVAL = 4
 
 # pylint: disable=unused-argument, protected-access, logging-format-interpolation
 
+
+# ----------------
+# TeamCloud
+# ----------------
+
+def teamcloud_create(cmd, client, base_url, config_yaml):
+    client._client.config.base_url = base_url
+    raise CLIError('TODO: Implement `az tc create`')
+
+
+def status_get(cmd, client, base_url, tracking_id, project_id=None):
+    client._client.config.base_url = base_url
+    return client.get_project_status(project_id, tracking_id) if project_id else client.get_status(tracking_id)
+
+
 # ----------------
 # TeamCloud Users
 # ----------------
-
 
 def teamcloud_user_create(cmd, client, base_url, user_name, user_role, tags=None):
     user_definition = UserDefinition(
@@ -69,7 +83,7 @@ def project_create(cmd, client, base_url, project_name, project_type=None, tags=
 
 
 def project_delete(cmd, client, base_url, project_id):
-    return _delete_with_status(cmd, client, base_url, project_id, client.delete_project_user)
+    return _delete_with_status(cmd, client, base_url, project_id, client.delete_project)
 
 
 def project_list(cmd, client, base_url):
@@ -116,9 +130,9 @@ def project_user_get(cmd, client, base_url, project_id, user_id):
 # Project Types
 # ----------------
 
-def project_type_create(cmd, client, base_url, project_type_id):
+def project_type_create(cmd, client, base_url, project_type_id, tags=None):
     client._client.config.base_url = base_url
-    project_type = ProjectType(id=project_type_id)
+    project_type = ProjectType(id=project_type_id, tags=tags)
     return client.create_project_type(project_type)
 
 
@@ -163,15 +177,6 @@ def provider_list(cmd, client, base_url):
 def provider_get(cmd, client, base_url, provider_id):
     client._client.config.base_url = base_url
     return client.get_provider_by_id(provider_id)
-
-
-# ----------------
-# Status
-# ----------------
-
-def status_get(cmd, client, base_url, tracking_id, project_id=None):
-    client._client.config.base_url = base_url
-    return client.get_project_status(project_id, tracking_id) if project_id else client.get_status(tracking_id)
 
 
 # ----------------

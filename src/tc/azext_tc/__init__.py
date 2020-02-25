@@ -16,8 +16,8 @@ class TcCommandsLoader(AzCommandsLoader):
         tc_custom = CliCommandType(
             operations_tmpl='azext_tc.custom#{}',
             client_factory=cf_tc)
-        super(TcCommandsLoader, self).__init__(cli_ctx=cli_ctx,
-                                                  custom_command_type=tc_custom)
+        super(TcCommandsLoader, self).__init__(
+            cli_ctx=cli_ctx, custom_command_type=tc_custom)
 
     def load_command_table(self, args):
         from azext_tc.commands import load_command_table
