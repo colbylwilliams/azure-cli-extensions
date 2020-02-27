@@ -29,7 +29,7 @@ class User(Model):
         'tags': {'key': 'tags', 'type': '{str}'},
     }
 
-    def __init__(self, *, id: str = None, role: str = None, tags=None, **kwargs) -> None:
+    def __init__(self, *, id: str=None, role: str=None, tags=None, **kwargs) -> None:
         super(User, self).__init__(**kwargs)
         self.id = id
         self.role = role
