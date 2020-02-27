@@ -5,6 +5,7 @@
 
 from collections import OrderedDict
 # from knack.util import CLIError
+# from msrest.pipeline import ClientRawResponse
 from knack.log import get_logger
 from azext_tc.vendored_sdks.teamcloud.models import (ErrorResult, StatusResult)
 
@@ -12,31 +13,41 @@ logger = get_logger(__name__)
 
 
 def transform_output(result):
+
     if isinstance(result, ErrorResult):
         return transform_error(result)
 
     if isinstance(result, StatusResult):
         return transform_status(result)
 
-    logger.warning(result.__dict__)
+    # if --raw was passed may be ClientRawResponse
+    # if isinstance(result, ClientRawResponse):
+    #     return result.output
 
+    # assume DataResult
     try:
         return result.data
     except AttributeError:
-        logger.warning('nope')
-        return None
+        return result
 
 
 def transform_error(result):
-    logger.error('Error: {}'.format(result.status))
+    logger.error('Error: %s', result.status)
     return result
 
 
 def transform_status(result):
-    return result
+    # If the StatusResult returns a 302 or 201 code msrest
+    # automatically follows the location header sending a
+    # GET request to retrieve the new object and stores the
+    # GET response (DataResult) in additional_properties
+    try:
+        return result.additional_properties['data']
+    except (AttributeError, KeyError):
+        return result
 
 # ----------------
-# TeamCloud Users
+# Table Output
 # ----------------
 
 
@@ -54,10 +65,6 @@ def transform_user_table_output(result):
         ]))
 
     return resultList
-
-# ----------------
-# Projects
-# ----------------
 
 
 def transform_project_table_output(result):
@@ -80,14 +87,6 @@ def transform_project_table_output(result):
 
     return resultList
 
-# ----------------
-# Project Users
-# ----------------
-
-# ----------------
-# Project Types
-# ----------------
-
 
 def transform_project_type_table_output(result):
     if not isinstance(result, list):
@@ -109,10 +108,6 @@ def transform_project_type_table_output(result):
         ]))
 
     return resultList
-
-# ----------------
-# Providers
-# ----------------
 
 
 def transform_provider_table_output(result):

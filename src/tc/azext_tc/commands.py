@@ -4,7 +4,6 @@
 # --------------------------------------------------------------------------------------------
 
 # pylint: disable=line-too-long
-from azure.cli.core.commands import CliCommandType
 from azext_tc._client_factory import cf_tc
 from ._transformers import (
     transform_output,
@@ -16,10 +15,6 @@ from ._transformers import (
 
 def load_command_table(self, _):
 
-    tc_sdk = CliCommandType(
-        operations_tmpl='azext_tc.vendored_sdks.operations#TeamCloudClient.{}',
-        client_factory=cf_tc)
-
     # ----------------
     # TeamCloud
     # ----------------
@@ -27,7 +22,7 @@ def load_command_table(self, _):
     with self.command_group('tc', is_preview=True):
         pass
 
-    with self.command_group('tc', tc_sdk, client_factory=cf_tc) as g:
+    with self.command_group('tc', client_factory=cf_tc) as g:
         g.custom_command('create', 'teamcloud_create',
                          transform=transform_output)
         g.custom_command('status', 'status_get',
@@ -37,7 +32,7 @@ def load_command_table(self, _):
     # TeamCloud Users
     # ----------------
 
-    with self.command_group('tc user', tc_sdk, client_factory=cf_tc) as g:
+    with self.command_group('tc user', client_factory=cf_tc) as g:
         g.custom_command('create', 'teamcloud_user_create',
                          transform=transform_output)
         g.custom_command('delete', 'teamcloud_user_delete',
@@ -51,7 +46,7 @@ def load_command_table(self, _):
     # Projects
     # ----------------
 
-    with self.command_group('tc project', tc_sdk, client_factory=cf_tc) as g:
+    with self.command_group('tc project', client_factory=cf_tc) as g:
         g.custom_command('create', 'project_create',
                          transform=transform_output)
         g.custom_command('delete', 'project_delete',
@@ -65,7 +60,7 @@ def load_command_table(self, _):
     # Project Users
     # ----------------
 
-    with self.command_group('tc project user', tc_sdk, client_factory=cf_tc) as g:
+    with self.command_group('tc project user', client_factory=cf_tc) as g:
         g.custom_command('create', 'project_user_create',
                          transform=transform_output)
         g.custom_command('delete', 'project_user_delete',
@@ -79,7 +74,7 @@ def load_command_table(self, _):
     # Project Types
     # ----------------
 
-    with self.command_group('tc project-type', tc_sdk, client_factory=cf_tc) as g:
+    with self.command_group('tc project-type', client_factory=cf_tc) as g:
         g.custom_command('create', 'project_type_create',
                          transform=transform_output)
         g.custom_command('delete', 'project_type_delete',
@@ -93,7 +88,7 @@ def load_command_table(self, _):
     # Providers
     # ----------------
 
-    with self.command_group('tc provider', tc_sdk, client_factory=cf_tc) as g:
+    with self.command_group('tc provider', client_factory=cf_tc) as g:
         g.custom_command('create', 'provider_create',
                          transform=transform_output)
         g.custom_command('delete', 'provider_delete',

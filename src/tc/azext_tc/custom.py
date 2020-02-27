@@ -4,9 +4,9 @@
 # --------------------------------------------------------------------------------------------
 
 from time import sleep
+from urllib.parse import urlparse
 from knack.util import CLIError
 from knack.log import get_logger
-from urllib.parse import urlparse
 from azext_tc.vendored_sdks.teamcloud.models import (
     StatusResult,
     ProjectDefinition,
@@ -14,14 +14,11 @@ from azext_tc.vendored_sdks.teamcloud.models import (
     Provider,
     ProjectType)
 
-import urllib3
-urllib3.disable_warnings()
-
 logger = get_logger(__name__)
 
-STATUS_POLLING_SLEEP_INTERVAL = 4
+STATUS_POLLING_SLEEP_INTERVAL = 2
 
-# pylint: disable=unused-argument, protected-access, logging-format-interpolation
+# pylint: disable=unused-argument, protected-access
 
 
 # ----------------
@@ -33,16 +30,16 @@ def teamcloud_create(cmd, client, base_url, config_yaml):
     raise CLIError('TODO: Implement `az tc create`')
 
 
-def status_get(cmd, client, base_url, tracking_id, project_id=None):
+def status_get(cmd, client, base_url, tracking_id, project=None):
     client._client.config.base_url = base_url
-    return client.get_project_status(project_id, tracking_id) if project_id else client.get_status(tracking_id)
+    return client.get_project_status(project, tracking_id) if project else client.get_status(tracking_id)
 
 
 # ----------------
 # TeamCloud Users
 # ----------------
 
-def teamcloud_user_create(cmd, client, base_url, user_name, user_role, tags=None):
+def teamcloud_user_create(cmd, client, base_url, user_name, user_role='Creator', tags=None):
     user_definition = UserDefinition(
         email=user_name, role=user_role, tags=tags)
     return _create_with_status(cmd=cmd,
@@ -50,11 +47,11 @@ def teamcloud_user_create(cmd, client, base_url, user_name, user_role, tags=None
                                base_url=base_url,
                                payload=user_definition,
                                create_func=client.create_team_cloud_user,
-                               get_func=client.get_team_cloud_user_by_id)
+                               get_func=client.get_team_cloud_user_by_name_or_id)
 
 
-def teamcloud_user_delete(cmd, client, base_url, user_id):
-    return _delete_with_status(cmd, client, base_url, user_id, client.delete_team_cloud_user)
+def teamcloud_user_delete(cmd, client, base_url, user):
+    return _delete_with_status(cmd, client, base_url, user, client.delete_team_cloud_user)
 
 
 def teamcloud_user_list(cmd, client, base_url):
@@ -62,14 +59,14 @@ def teamcloud_user_list(cmd, client, base_url):
     return client.get_team_cloud_users()
 
 
-def teamcloud_user_get(cmd, client, base_url, user_id):
+def teamcloud_user_get(cmd, client, base_url, user):
     client._client.config.base_url = base_url
-    return client.get_team_cloud_user_by_id(user_id)
-
+    return client.get_team_cloud_user_by_name_or_id(user)
 
 # ----------------
 # Projects
 # ----------------
+
 
 def project_create(cmd, client, base_url, project_name, project_type=None, tags=None):
     project_definition = ProjectDefinition(
@@ -79,11 +76,11 @@ def project_create(cmd, client, base_url, project_name, project_type=None, tags=
                                base_url=base_url,
                                payload=project_definition,
                                create_func=client.create_project,
-                               get_func=client.get_project_by_id)
+                               get_func=client.get_project_by_name_or_id)
 
 
-def project_delete(cmd, client, base_url, project_id):
-    return _delete_with_status(cmd, client, base_url, project_id, client.delete_project)
+def project_delete(cmd, client, base_url, project):
+    return _delete_with_status(cmd, client, base_url, project, client.delete_project)
 
 
 def project_list(cmd, client, base_url):
@@ -91,16 +88,16 @@ def project_list(cmd, client, base_url):
     return client.get_projects()
 
 
-def project_get(cmd, client, base_url, project_id):
+def project_get(cmd, client, base_url, project):
     client._client.config.base_url = base_url
-    return client.get_project_by_id(project_id)
+    return client.get_project_by_name_or_id(project)
 
 
 # ----------------
 # Project Users
 # ----------------
 
-def project_user_create(cmd, client, base_url, project_id, user_name, user_role, tags=None):
+def project_user_create(cmd, client, base_url, project, user_name, user_role='Member', tags=None):
     user_definition = UserDefinition(
         email=user_name, role=user_role, tags=tags)
     return _create_with_status(cmd=cmd,
@@ -108,37 +105,37 @@ def project_user_create(cmd, client, base_url, project_id, user_name, user_role,
                                base_url=base_url,
                                payload=user_definition,
                                create_func=client.create_project_user,
-                               get_func=client.get_project_user_by_id,
-                               project_id=project_id)
+                               get_func=client.get_project_user_by_name_or_id,
+                               project_id=project)
 
 
-def project_user_delete(cmd, client, base_url, project_id, user_id):
-    return _delete_with_status(cmd, client, base_url, user_id, client.delete_project_user, project_id)
+def project_user_delete(cmd, client, base_url, project, user):
+    return _delete_with_status(cmd, client, base_url, user, client.delete_project_user, project)
 
 
-def project_user_list(cmd, client, base_url, project_id):
+def project_user_list(cmd, client, base_url, project):
     client._client.config.base_url = base_url
-    return client.get_project_users(project_id)
+    return client.get_project_users(project)
 
 
-def project_user_get(cmd, client, base_url, project_id, user_id):
+def project_user_get(cmd, client, base_url, project, user):
     client._client.config.base_url = base_url
-    return client.get_project_user_by_id(user_id, project_id)
+    return client.get_project_user_by_name_or_id(user, project)
 
 
 # ----------------
 # Project Types
 # ----------------
 
-def project_type_create(cmd, client, base_url, project_type_id, tags=None):
+def project_type_create(cmd, client, base_url, project_type, tags=None):
     client._client.config.base_url = base_url
-    project_type = ProjectType(id=project_type_id, tags=tags)
-    return client.create_project_type(project_type)
+    proj_type = ProjectType(id=project_type, tags=tags)
+    return client.create_project_type(proj_type)
 
 
-def project_type_delete(cmd, client, base_url, project_type_id):
+def project_type_delete(cmd, client, base_url, project_type):
     client._client.config.base_url = base_url
-    return client.delete_project_type(project_type_id)
+    return client.delete_project_type(project_type)
 
 
 def project_type_list(cmd, client, base_url):
@@ -146,27 +143,27 @@ def project_type_list(cmd, client, base_url):
     return client.get_project_types()
 
 
-def project_type_get(cmd, client, base_url, project_type_id):
+def project_type_get(cmd, client, base_url, project_type):
     client._client.config.base_url = base_url
-    return client.get_project_type_by_id(project_type_id)
+    return client.get_project_type_by_id(project_type)
 
 
 # ----------------
 # Providers
 # ----------------
 
-def provider_create(cmd, client, base_url, provider_id):
-    provider = Provider(provider_id)
+def provider_create(cmd, client, base_url, provider):
+    payload = Provider(provider)
     return _create_with_status(cmd=cmd,
                                client=client,
                                base_url=base_url,
-                               payload=provider,
+                               payload=payload,
                                create_func=client.create_provider,
                                get_func=client.get_provider_by_id)
 
 
-def provider_delete(cmd, client, base_url, provider_id):
-    return _delete_with_status(cmd, client, base_url, provider_id, client.delete_provider)
+def provider_delete(cmd, client, base_url, provider):
+    return _delete_with_status(cmd, client, base_url, provider, client.delete_provider)
 
 
 def provider_list(cmd, client, base_url):
@@ -174,9 +171,9 @@ def provider_list(cmd, client, base_url):
     return client.get_providers()
 
 
-def provider_get(cmd, client, base_url, provider_id):
+def provider_get(cmd, client, base_url, provider):
     client._client.config.base_url = base_url
-    return client.get_provider_by_id(provider_id)
+    return client.get_provider_by_id(provider)
 
 
 # ----------------
@@ -200,20 +197,11 @@ def _create_with_status(cmd, client, base_url, payload, create_func, get_func, p
             hook.end(messag='Finished.')
             return result
 
-        if result.code == 302:
-            hook.add(message='{}: {}'.format(
-                result.state, result.state_message or 'Creating new {}'.format(type_name)))
-
-            item_id = urlparse(result.location).path.split('/')[-1]
-
-            result = get_func(
-                item_id, project_id) if project_id else get_func(item_id)
-
         if result.code == 202:
-            for i in range(STATUS_POLLING_SLEEP_INTERVAL):
+            for _ in range(STATUS_POLLING_SLEEP_INTERVAL * 2):
                 hook.add(message='{}: {}'.format(
                     result.state, result.state_message or 'Creating new {}'.format(type_name)))
-                sleep(1)
+                sleep(0.5)
 
             # status for project children
             if project_id:
@@ -251,10 +239,10 @@ def _delete_with_status(cmd, client, base_url, item_id, delete_func, project_id=
             return result
 
         if result.code == 202:
-            for i in range(STATUS_POLLING_SLEEP_INTERVAL):
+            for _ in range(STATUS_POLLING_SLEEP_INTERVAL * 2):
                 hook.add(message='{}: {}'.format(
                     result.state, result.state_message or 'Deleting {}'.format(type_name)))
-                sleep(1)
+                sleep(0.5)
 
             # status for project children
             if project_id:
