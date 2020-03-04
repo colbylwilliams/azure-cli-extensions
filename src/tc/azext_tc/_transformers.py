@@ -74,13 +74,14 @@ def transform_project_table_output(result):
     resultList = []
 
     for item in result:
+        rg = item['resourceGroup']
         resultList.append(OrderedDict([
             ('Project ID', item['id']),
             ('Name', item['name']),
             ('Type', item['type']['id']),
-            ('Resource Group', item['resourceGroup']['resourceGroupName']),
-            ('Subscription', item['resourceGroup']['subscriptionId']),
-            ('Region', item['resourceGroup']['region']),
+            ('Resource Group', '' if rg is None else rg['resourceGroupName']),
+            ('Subscription', '' if rg is None else rg['subscriptionId']),
+            ('Region', '' if rg is None else rg['region']),
             ('Tags', str(item['tags'])),
             ('Properties', str(item['properties']))
         ]))
@@ -89,6 +90,7 @@ def transform_project_table_output(result):
 
 
 def transform_project_type_table_output(result):
+    logger.warning(result)
     if not isinstance(result, list):
         result = [result]
 

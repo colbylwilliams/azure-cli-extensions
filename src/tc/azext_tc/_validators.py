@@ -12,7 +12,6 @@ from uuid import UUID
 from azure.cli.core.util import CLIError
 from knack.log import get_logger
 from azext_tc.vendored_sdks.teamcloud.models import ErrorResult
-from ._client_factory import cf_tc
 
 logger = get_logger(__name__)
 
@@ -37,7 +36,9 @@ def project_name_or_id_validator(cmd, namespace):
             raise CLIError(
                 '--project should be a valid uuid or a project name string with length [4,31]')
 
-        client = cf_tc(cmd.cli_ctx)
+        from ._client_factory import teamcloud_client_factory
+
+        client = teamcloud_client_factory(cmd.cli_ctx)
         client._client.config.base_url = namespace.base_url
         result = client.get_project_by_name_or_id(namespace.project)
 
@@ -74,7 +75,7 @@ def project_type_id_validator(cmd, namespace):
 
 
 def provider_id_validator(cmd, namespace):
-    if match(r'^(?:[a-z]+(?:\.[a-z]+)+)$', namespace.name) is None:
+    if match(r'^(?:[a-z]+(?:\.[a-z]+)+)$', namespace.provider) is None:
         raise CLIError(
             '--name should only contain lowercase letters and periods [.] with length [4,31]')
 
