@@ -239,7 +239,15 @@ type: command
 short-summary: Create a new provider.
 examples:
   - name: Create a new provider.
-    text: az tc project-type create --name my.provider.id --tags tag=value
+    text: |
+      az tc provider create \\
+        --name azure.devtestlabs \\
+        --url https://my-provider.azurewebsites.net \\
+        --auth-code cmFuZG9tcmFuZG9tcmFuZG9tcmFuZG9tcmFuZG9tcmFuZG9tcmFuZA== \\
+        --create-dependencies azure.appinsights \\
+        --init-dependencies azure.appinsights \\
+        --events azure.devtestlabs azure.appinsights
+        --properties
 """
 
 helps['tc provider delete'] = """
@@ -273,5 +281,5 @@ type: command
 short-summary: Deploy a provider.
 examples:
   - name: Deploy a provider.
-    text: az tc provider deploy --name azure.appinsights
+    text: az tc provider deploy
 """

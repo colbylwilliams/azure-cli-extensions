@@ -168,7 +168,7 @@ def load_arguments(self, _):
                    validator=provider_id_validator)
         c.argument('url', type=str, help='Provider url.',
                    validator=url_validator)
-        c.argument('code', type=str, help='Provider auth code.',
+        c.argument('auth_code', type=str, help='Provider auth code.',
                    validator=auth_code_validator)
         c.argument('create_dependencies', nargs='+',
                    help='Space-seperated provider ids.',

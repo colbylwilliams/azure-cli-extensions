@@ -415,8 +415,10 @@ def teamcloud_tag_list(cmd, client, base_url, tag_name, tag_value):
 
 def project_create(cmd, client, base_url, name, project_type=None, tags=None):
     from azext_tc.vendored_sdks.teamcloud.models import ProjectDefinition
+    import json
     project_definition = ProjectDefinition(
         name=name, project_type=project_type, tags=tags)
+    # return json.dumps(tags)
     return _create_with_status(cmd=cmd,
                                client=client,
                                base_url=base_url,

@@ -138,7 +138,7 @@ def url_validator(cmd, namespace):
 
 def base_url_validator(cmd, namespace):
     if namespace.base_url:
-        if not _is_valid_url(namespace.url):
+        if not _is_valid_url(namespace.base_url):
             raise CLIError(
                 '--base-url should be a valid url')
 
