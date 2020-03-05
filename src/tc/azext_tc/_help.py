@@ -186,8 +186,17 @@ helps['tc project-type create'] = """
 type: command
 short-summary: Create a new project type.
 examples:
-  - name: Create a new project type.
-    text: az tc project-type create --name my.project.type --tags tag=value
+  - name: Create a new default project type.
+    text: |
+      az tc project-type create \\
+        --name my.project.type \\
+        --location eastus \\
+        --subscriptions subsciptionId1 subsciptionId2 subsciptionId3 \\
+        --subscription-capacity 5 \\
+        --resource-group-name-prefix TC_ \\
+        --provider my.provider.id.one prop1=val1 prop2=val2 \\
+        --provider my.provider.id.two prop3=val3 prop4=val4 \\
+        --default
 """
 
 helps['tc project-type delete'] = """
@@ -230,7 +239,7 @@ type: command
 short-summary: Create a new provider.
 examples:
   - name: Create a new provider.
-    text: az tc project-type create --name my.project.type --tags tag=value
+    text: az tc project-type create --name my.provider.id --tags tag=value
 """
 
 helps['tc provider delete'] = """
@@ -257,4 +266,12 @@ short-summary: Get a provider.
 examples:
   - name: Get a provider.
     text: az tc provider show --name my.provider.id
+"""
+
+helps['tc provider deploy'] = """
+type: command
+short-summary: Deploy a provider.
+examples:
+  - name: Deploy a provider.
+    text: az tc provider deploy --name azure.appinsights
 """

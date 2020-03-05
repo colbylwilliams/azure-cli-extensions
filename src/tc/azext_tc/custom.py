@@ -10,18 +10,6 @@ from knack.log import get_logger
 from azure.cli.core.commands import LongRunningOperation
 from azure.cli.core.profiles import ResourceType, get_sdk  # , get_api_version
 from azure.cli.core.util import sdk_no_wait
-# from azure.cli.command_modules.appservice.custom import (
-#     create_app_service_plan,
-#     create_webapp,
-#     create_functionapp_app_service_plan,
-#     create_function
-# )
-# from azure.cli.command_modules.appservice._create_util import (
-#     should_create_new_rg,
-#     create_resource_group,
-#     web_client_factory,
-#     should_create_new_app
-# )
 
 import urllib3  # pylint: disable=wrong-import-order
 urllib3.disable_warnings()
@@ -316,12 +304,12 @@ def _create_resource_manager_sp(cmd):
 
 
 def teamcloud_create(cmd, client, name, location, config_yaml=None, tags=None):
-    from azure.cli.core.util import random_string
+    # from azure.cli.core.util import random_string
     cli_ctx = cmd.cli_ctx
 
     location = location.lower()
     rg_name = 'TeamCloud'
-    deployment_repo = 'https://github.com/microsoft/TeamCloud.git'
+    # deployment_repo = 'https://github.com/microsoft/TeamCloud.git'
 
     logger.warning('Creating resource group...')
     rg, subscription_id = _get_resource_group_by_name(cli_ctx, rg_name)
@@ -368,9 +356,9 @@ def teamcloud_create(cmd, client, name, location, config_yaml=None, tags=None):
     logger.warning('Creating api app service...')
     api_app = _create_api_app(cli_ctx, name_clean, rg_name, location, appconfig, appinsights, tags)
 
-    logger.warning('Successfully created TeamCloud instance')
+    logger.warning('Successfully created TeamCloud instance.')
 
-    return 'TeamCloud instance successfully created at: https://{}'.format(api_app.default_host_name)
+    return 'TeamCloud instance successfully created at: https://{}. Use `az configure --defaults tc-base-url=https://{}` to configure this as your default TeamCloud instance'.format(api_app.default_host_name, api_app.default_host_name)
 
 
 def status_get(cmd, client, base_url, tracking_id, project=None):
@@ -500,20 +488,18 @@ def project_tag_list(cmd, client, base_url, project, tag_name, tag_value):
 
 # Project Types
 
-# id: str VAL: project type id
-# default: bool
-# region: str (location) VAL: azure location
-# subscriptions: [str] >= 3 VAL: guid & maybe sub val
-# subscription_capacity: int
-# resource_group_name_prefix: str VAL:
-# providers: [ProviderReference] (id: str, properties: {str}) VAL: id is valid provider id
-# tags: {str}
-# properties: {str}
-
-def project_type_create(cmd, client, base_url, project_type, subscriptions, default=False, location=None, subscription_capacity=10, resource_group_name_prefix=None, tags=None, properties=None):
+def project_type_create(cmd, client, base_url, project_type, subscriptions, provider, providers, location=None, subscription_capacity=10, resource_group_name_prefix=None, tags=None, properties=None, default=False):
     from azext_tc.vendored_sdks.teamcloud.models import ProjectType
     client._client.config.base_url = base_url
-    proj_type = ProjectType(id=project_type, tags=tags)
+    proj_type = ProjectType(
+        default=default,
+        region=location,
+        subscriptions=subscriptions,
+        subscription_capacity=subscription_capacity,
+        resource_group_name_prefix=resource_group_name_prefix,
+        providers=providers,
+        tags=tags,
+        properties=properties)
     return client.create_project_type(proj_type)
 
 
@@ -534,18 +520,23 @@ def project_type_get(cmd, client, base_url, project_type):
 
 # Providers
 
-# id: str VAL: provider id
-# url: str VAL: url
-# auth_code: str
-# principal_id: str VAL: uuid
-# optional: bool
-# dependencies: ProviderDependenciesModel(create: [str], init: [str]) VAL: create & init are valid provider ids
-# events: [str] VAL: valid provider ids
-# properties: {str}
+def provider_create(cmd, client, base_url, provider, url, auth_code, create_dependencies=None, init_dependencies=None, events=None, properties=None):
+    from azext_tc.vendored_sdks.teamcloud.models import Provider, ProviderDependenciesModel
 
-def provider_create(cmd, client, base_url, provider):
-    from azext_tc.vendored_sdks.teamcloud.models import Provider
-    payload = Provider(provider)
+    dependencies = ProviderDependenciesModel(
+        create=create_dependencies,
+        init=init_dependencies
+    )
+
+    payload = Provider(
+        id=provider,
+        url=url,
+        auth_code=auth_code,
+        dependencies=dependencies,
+        events=events,
+        properties=properties,
+    )
+
     return _create_with_status(cmd=cmd,
                                client=client,
                                base_url=base_url,
@@ -568,7 +559,11 @@ def provider_get(cmd, client, base_url, provider):
     return client.get_provider_by_id(provider)
 
 
+def provider_deploy(cmd, client, base_url, provider):
+    client._client.config.base_url = base_url
+
 # Util
+
 
 def _create_with_status(cmd, client, base_url, payload, create_func, get_func, project_id=None):
     from azext_tc.vendored_sdks.teamcloud.models import StatusResult

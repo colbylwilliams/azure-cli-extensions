@@ -3,29 +3,33 @@
 # Licensed under the MIT License. See License.txt in the project root for license information.
 # --------------------------------------------------------------------------------------------
 
-# pylint: disable=line-too-long
+# pylint: disable=line-too-long, too-many-statements
 
 from knack.arguments import CLIArgumentType
 from azure.cli.core.commands.parameters import (
     tags_type,
     get_enum_type,
     get_location_type)
-from ._validators import (
-    project_name_validator,
-    project_name_or_id_validator,
-    user_name_validator,
-    user_name_or_id_validator,
-    tracking_id_validator,
-    project_type_id_validator,
-    provider_id_validator)
+
+from azext_tc._validators import (
+    project_name_validator, project_name_or_id_validator, user_name_validator, user_name_or_id_validator,
+    tracking_id_validator, project_type_id_validator, project_type_id_validator_name, provider_id_validator,
+    subscriptions_list_validator, provider_event_list_validator, provider_create_dependencies_validator,
+    provider_init_dependencies_validator, url_validator, base_url_validator, auth_code_validator)
+
+from azext_tc._completers import (
+    get_project_completion_list)
+
+from azext_tc._actions import CreateProviderReference
 
 
 def load_arguments(self, _):
 
     tc_url_type = CLIArgumentType(
-        options_list=['--url', '-u'],
-        help='Base url of the TeamCloud instance. Use `az configure --defaults tc-url=<url>` to configure a default.',
-        configured_default='tc-url')
+        options_list=['--base-url', '-u'],
+        help='Base url of the TeamCloud instance. Use `az configure --defaults tc-base-url=<url>` to configure a default.',
+        configured_default='tc-base-url',
+        validator=base_url_validator)
 
     user_name_type = CLIArgumentType(
         options_list=['--name', '-n'],
@@ -40,7 +44,8 @@ def load_arguments(self, _):
     project_name_or_id_type = CLIArgumentType(
         options_list=['--project', '-p'],
         help='Project name or id (uuid).',
-        validator=project_name_or_id_validator)
+        validator=project_name_or_id_validator,
+        completer=get_project_completion_list)
 
     # Global
 
@@ -50,10 +55,14 @@ def load_arguments(self, _):
         c.argument('location', get_location_type(self.cli_ctx))
         c.argument('tags', tags_type)
 
-    # ignore global az arg --subscription for everything except `tc create`
-    for scope in ['tc status', 'tc user', 'tc project', 'tc project-type', 'tc provider', 'tc tag']:
-        with self.argument_context(scope, arg_group='Global') as c:
+    # ignore global az arg --subscription for everything except `tc create` and `tc provider deploy`
+    for scope in ['tc status', 'tc user', 'tc project', 'tc project-type', 'tc provider create', 'tc provider show', 'tc provider delete', 'tc tag']:
+        with self.argument_context(scope, arg_group='TeamCloud Global') as c:
             c.ignore('_subscription')
+
+    # requre base_url arg for everything except `tc create` and `tc provider deploy`
+    for scope in ['tc status', 'tc user', 'tc project', 'tc project-type', 'tc provider', 'tc tag']:
+        with self.argument_context(scope, arg_group='TeamCloud Global') as c:
             c.argument('base_url', tc_url_type)
 
     for scope in ['tc tag', 'tc project tag']:
@@ -68,7 +77,7 @@ def load_arguments(self, _):
                    type=str, help='TeamCloud configuration yaml file.')
 
     with self.argument_context('tc status') as c:
-        c.argument('project', project_name_or_id_type)
+        c.argument('project', project_name_or_id_type, completer=get_project_completion_list)
         c.argument('tracking_id', options_list=['--tracking-id', '-t'],
                    type=str, help='Operation tracking id.',
                    validator=tracking_id_validator)
@@ -100,7 +109,8 @@ def load_arguments(self, _):
         with self.argument_context(scope) as c:
             c.argument('project', options_list=['--name', '-n'],
                        type=str, help='Project name or id (uuid).',
-                       validator=project_name_or_id_validator)
+                       validator=project_name_or_id_validator,
+                       completer=get_project_completion_list)
 
     with self.argument_context('tc project tag') as c:
         c.argument('project', project_name_or_id_type)
@@ -122,46 +132,63 @@ def load_arguments(self, _):
 
     # Project Types
 
-    # id: str VAL: project type id
-    # default: bool
-    # region: str (location) VAL: azure location
-    # subscriptions: [str] >= 3 VAL: guid & maybe sub val
-    # subscription_capacity: int
-    # resource_group_name_prefix: str VAL:
-    # providers: [ProviderReference] (id: str, properties: {str}) VAL: id is valid provider id
-    # tags: {str}
-    # properties: {str}
-
     with self.argument_context('tc project-type create') as c:
         c.argument('project_type', options_list=['--name', '-n'],
                    type=str, help='Project type id.',
-                   validator=project_type_id_validator)
+                   validator=project_type_id_validator_name)
+        c.argument('location', get_location_type(self.cli_ctx),
+                   help='Project type region.')
+        c.argument('subscriptions', nargs='+',
+                   help='Space-seperated subscription ids (3+).',
+                   validator=subscriptions_list_validator)
+        c.argument('subscription_capacity', type=int, default=10,
+                   help='Maximum number of projects per subscription.')
+        c.argument('default', action='store_true',
+                   help='Set as the default project type.')
+        c.argument('resource_group_name_prefix', type=str,
+                   help='Prepended to all project resource group names.')
+        c.argument('provider', nargs='+', action=CreateProviderReference,
+                   help='Project type provider: provider_id [key=value ...].  Use multiple --provider arguemnts to specify multiple providers.')
         c.argument('tags', tags_type)
+        c.argument('properties', tags_type,
+                   help="Space-separated properties: key[=value][key[=value] ...]. Use '' to clear existing properties.")
+        c.ignore('providers')
 
     for scope in ['tc project-type show', 'tc project-type delete']:
         with self.argument_context(scope) as c:
-            c.argument('project_type_id', options_list=['--name', '-n'],
+            c.argument('project_type', options_list=['--name', '-n'],
                        type=str, help='Project type id.',
-                       validator=project_type_id_validator)
+                       validator=project_type_id_validator_name)
 
     # Providers
-
-    # id: str VAL: provider id
-    # url: str VAL: url
-    # auth_code: str
-    # principal_id: str VAL: uuid
-    # optional: bool
-    # dependencies: ProviderDependenciesModel(create: [str], init: [str]) VAL: create & init are valid provider ids
-    # events: [str] VAL: valid provider ids
-    # properties: {str}
 
     with self.argument_context('tc provider create') as c:
         c.argument('provider', options_list=['--name', '-n'],
                    type=str, help='Provider id.',
                    validator=provider_id_validator)
+        c.argument('url', type=str, help='Provider url.',
+                   validator=url_validator)
+        c.argument('code', type=str, help='Provider auth code.',
+                   validator=auth_code_validator)
+        c.argument('create_dependencies', nargs='+',
+                   help='Space-seperated provider ids.',
+                   validator=provider_create_dependencies_validator)
+        c.argument('init_dependencies', nargs='+',
+                   help='Space-seperated provider ids.',
+                   validator=provider_init_dependencies_validator)
+        c.argument('events', nargs='+',
+                   help='Space-seperated provider ids.',
+                   validator=provider_event_list_validator)
+        c.argument('properties', tags_type,
+                   help="Space-separated properties: key[=value][key[=value] ...]. Use '' to clear existing properties.")
 
     for scope in ['tc provider show', 'tc provider delete']:
         with self.argument_context(scope) as c:
             c.argument('provider', options_list=['--name', '-n'],
                        type=str, help='Provider id.',
                        validator=provider_id_validator)
+
+    with self.argument_context('tc provider deploy') as c:
+        c.argument('provider', get_enum_type(['azure.devops', 'azure.devtestlabs', 'azure.appinsights']),
+                   options_list=['--name', '-n'], help='Provider id.',
+                   validator=provider_id_validator)

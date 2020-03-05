@@ -51,7 +51,7 @@ def load_command_table(self, _):
         g.custom_command('create', 'project_create',
                          transform=transform_output)
         g.custom_command('delete', 'project_delete',
-                         transform=transform_output, supports_no_wait=True)
+                         transform=transform_output, supports_no_wait=True, confirmation='Are you sure you want to delete this project?')
         g.custom_command('list', 'project_list',
                          transform=transform_output, table_transformer=transform_project_table_output)
         g.custom_show_command('show', 'project_get',
@@ -99,3 +99,4 @@ def load_command_table(self, _):
                          transform=transform_output, table_transformer=transform_provider_table_output)
         g.custom_show_command('show', 'provider_get',
                               transform=transform_output)
+        g.custom_command('deploy', 'provider_deploy')
