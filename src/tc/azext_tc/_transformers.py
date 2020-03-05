@@ -134,3 +134,18 @@ def transform_provider_table_output(result):
         ]))
 
     return resultList
+
+
+def transform_tag_table_output(result):
+    if not isinstance(result, dict):
+        result = {}
+
+    resultList = []
+
+    for k, v in result.items():
+        resultList.append(OrderedDict([
+            ('Key', k),
+            ('Value', v)
+        ]))
+
+    return resultList

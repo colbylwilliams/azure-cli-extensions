@@ -15,7 +15,7 @@ logger = get_logger(__name__)
 @Completer
 def get_project_completion_list(cmd, prefix, namespace, **kwargs):  # pylint: disable=unused-argument
 
-    logger.warning('Completing...')
+    # logger.warning('Completing...')
 
     client = teamcloud_client_factory(cmd.cli_ctx)
     client._client.config.base_url = namespace.base_url  # pylint: disable=protected-access

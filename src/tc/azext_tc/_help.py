@@ -78,6 +78,47 @@ examples:
 """
 
 # ----------------
+# TeamCloud Tags
+# ----------------
+
+helps['tc tag'] = """
+type: group
+short-summary: Manage TeamCloud tags.
+"""
+
+helps['tc tag create'] = """
+type: command
+short-summary: Create a new TeamCloud tag.
+examples:
+  - name: Create a new TeamCloud tag.
+    text: az tc tag create --key myTag --value myTagValue
+"""
+
+helps['tc tag delete'] = """
+type: command
+short-summary: Delete a TeamCloud tag.
+examples:
+  - name: Delete a TeamCloud tag by key.
+    text: az tc tag delete --key myTag
+"""
+
+helps['tc tag list'] = """
+type: command
+short-summary: List all TeamCloud tags.
+examples:
+  - name: List all TeamCloud tags in table format.
+    text: az tc tag list -o table
+"""
+
+helps['tc tag show'] = """
+type: command
+short-summary: Get a TeamCloud tag.
+examples:
+  - name: Get a TeamCloud tag by key.
+    text: az tc tag show --key myTag
+"""
+
+# ----------------
 # Projects
 # ----------------
 
@@ -171,6 +212,47 @@ examples:
     text: az tc project user show --project myProjectId --name 'user@microsoft.com'
   - name: Get a project user by id.
     text: az tc project user show --project myProjectId --name userId
+"""
+
+# ----------------
+# Project Tags
+# ----------------
+
+helps['tc project tag'] = """
+type: group
+short-summary: Manage project tags.
+"""
+
+helps['tc project tag create'] = """
+type: command
+short-summary: Create a new project tag.
+examples:
+  - name: Create a new project tag.
+    text: az tc project tag create --project myProjectId --key myTag --value myTagValue
+"""
+
+helps['tc project tag delete'] = """
+type: command
+short-summary: Delete a project tag.
+examples:
+  - name: Delete a project tag by key.
+    text: az tc project tag delete --project myProjectId --key myTag
+"""
+
+helps['tc project tag list'] = """
+type: command
+short-summary: List all project tags.
+examples:
+  - name: List all project tags in table format.
+    text: az tc project tag list --project myProjectId -o table
+"""
+
+helps['tc project tag show'] = """
+type: command
+short-summary: Get a project tag.
+examples:
+  - name: Get a project tag by key.
+    text: az tc project tag show --project myProjectId --key myTag
 """
 
 # ----------------

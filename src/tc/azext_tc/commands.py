@@ -10,7 +10,8 @@ from ._transformers import (
     transform_user_table_output,
     transform_project_table_output,
     transform_project_type_table_output,
-    transform_provider_table_output)
+    transform_provider_table_output,
+    transform_tag_table_output)
 
 
 def load_command_table(self, _):
@@ -41,9 +42,14 @@ def load_command_table(self, _):
     # Tags
 
     with self.command_group('tc tag', client_factory=teamcloud_client_factory) as g:
-        g.custom_command('create', 'teamcloud_tag_create')
-        g.custom_command('delete', 'teamcloud_tag_delete')
-        g.custom_command('list', 'teamcloud_tag_list')
+        g.custom_command('create', 'teamcloud_tag_create',
+                         transform=transform_output)
+        g.custom_command('delete', 'teamcloud_tag_delete',
+                         transform=transform_output)
+        g.custom_command('list', 'teamcloud_tag_list',
+                         transform=transform_output, table_transformer=transform_tag_table_output)
+        g.custom_show_command('show', 'teamcloud_tag_get',
+                              transform=transform_output)
 
     # Projects
 
@@ -72,9 +78,14 @@ def load_command_table(self, _):
     # Project Tags
 
     with self.command_group('tc project tag', client_factory=teamcloud_client_factory) as g:
-        g.custom_command('create', 'project_tag_create')
-        g.custom_command('delete', 'project_tag_delete')
-        g.custom_command('list', 'project_tag_list')
+        g.custom_command('create', 'project_tag_create',
+                         transform=transform_output)
+        g.custom_command('delete', 'project_tag_delete',
+                         transform=transform_output)
+        g.custom_command('list', 'project_tag_list',
+                         transform=transform_output, table_transformer=transform_tag_table_output)
+        g.custom_show_command('show', 'project_tag_get',
+                              transform=transform_output)
 
     # Project Types
 

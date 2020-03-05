@@ -65,10 +65,13 @@ def load_arguments(self, _):
         with self.argument_context(scope, arg_group='TeamCloud Global') as c:
             c.argument('base_url', tc_url_type)
 
-    for scope in ['tc tag', 'tc project tag']:
+    for scope in ['tc tag create', 'tc project tag create']:
         with self.argument_context(scope) as c:
-            c.argument('tag_name', options_list=['--name', '-n'])
-            c.argument('tag_value', options_list='--value')
+            c.argument('tag_key', options_list=['--key', '-k'])
+
+    for scope in ['tc tag show', 'tc tag delete', 'tc project tag show', 'tc project tag delete']:
+        with self.argument_context(scope) as c:
+            c.argument('tag_value', options_list=['--value', '-v'])
 
     # TeamCloud
 

@@ -376,8 +376,7 @@ def teamcloud_user_create(cmd, client, base_url, user_name, user_role='Creator',
                                client=client,
                                base_url=base_url,
                                payload=user_definition,
-                               create_func=client.create_team_cloud_user,
-                               get_func=client.get_team_cloud_user_by_name_or_id)
+                               create_func=client.create_team_cloud_user)
 
 
 def teamcloud_user_delete(cmd, client, base_url, user):
@@ -396,35 +395,43 @@ def teamcloud_user_get(cmd, client, base_url, user):
 
 # TeamCloud Tags
 
-def teamcloud_tag_create(cmd, client, base_url, tag_name, tag_value):
+def teamcloud_tag_create(cmd, client, base_url, tag_key, tag_value):
     client._client.config.base_url = base_url
-    raise CLIError('TODO: Implement `az tc tag create')
+    return _create_with_status(cmd=cmd,
+                               client=client,
+                               base_url=base_url,
+                               payload={tag_key, tag_value},
+                               create_func=client.create_team_cloud_tag)
 
 
-def teamcloud_tag_delete(cmd, client, base_url, tag_name, tag_value):
+def teamcloud_tag_delete(cmd, client, base_url, tag_key):
     client._client.config.base_url = base_url
-    raise CLIError('TODO: Implement `az tc tag delete')
+    return _delete_with_status(cmd, client, base_url, tag_key, client.delete_team_cloud_tag)
+
+# TODO update
 
 
-def teamcloud_tag_list(cmd, client, base_url, tag_name, tag_value):
+def teamcloud_tag_list(cmd, client, base_url):
     client._client.config.base_url = base_url
-    raise CLIError('TODO: Implement `az tc tag list')
+    return client.get_team_cloud_tags()
+
+
+def teamcloud_tag_get(cmd, client, base_url, tag_key):
+    client._client.config.base_url = base_url
+    return client.get_team_cloud_tag_by_key(tag_key)
 
 
 # Projects
 
 def project_create(cmd, client, base_url, name, project_type=None, tags=None):
     from azext_tc.vendored_sdks.teamcloud.models import ProjectDefinition
-    import json
     project_definition = ProjectDefinition(
         name=name, project_type=project_type, tags=tags)
-    # return json.dumps(tags)
     return _create_with_status(cmd=cmd,
                                client=client,
                                base_url=base_url,
                                payload=project_definition,
-                               create_func=client.create_project,
-                               get_func=client.get_project_by_name_or_id)
+                               create_func=client.create_project)
 
 
 def project_delete(cmd, client, base_url, project, no_wait=False):
@@ -453,7 +460,6 @@ def project_user_create(cmd, client, base_url, project, user_name, user_role='Me
                                base_url=base_url,
                                payload=user_definition,
                                create_func=client.create_project_user,
-                               get_func=client.get_project_user_by_name_or_id,
                                project_id=project)
 
 
@@ -473,19 +479,31 @@ def project_user_get(cmd, client, base_url, project, user):
 
 # Project Tags
 
-def project_tag_create(cmd, client, base_url, project, tag_name, tag_value):
+def project_tag_create(cmd, client, base_url, project, tag_key, tag_value):
     client._client.config.base_url = base_url
-    raise CLIError('TODO: Implement `az tc project tag create')
+    return _create_with_status(cmd=cmd,
+                               client=client,
+                               base_url=base_url,
+                               payload={tag_key, tag_value},
+                               create_func=client.create_project_tag,
+                               project_id=project)
 
 
-def project_tag_delete(cmd, client, base_url, project, tag_name, tag_value):
+def project_tag_delete(cmd, client, base_url, project, tag_key):
     client._client.config.base_url = base_url
-    raise CLIError('TODO: Implement `az tc project tag delete')
+    return _delete_with_status(cmd, client, base_url, tag_key, client.delete_project_tag, project)
+
+# TODO update
 
 
-def project_tag_list(cmd, client, base_url, project, tag_name, tag_value):
+def project_tag_list(cmd, client, base_url, project):
     client._client.config.base_url = base_url
-    raise CLIError('TODO: Implement `az tc project tag list')
+    return client.get_project_tags(project)
+
+
+def project_tag_get(cmd, client, base_url, project, tag_key):
+    client._client.config.base_url = base_url
+    return client.get_project_tag_by_key(project, tag_key)
 
 
 # Project Types
@@ -543,8 +561,7 @@ def provider_create(cmd, client, base_url, provider, url, auth_code, create_depe
                                client=client,
                                base_url=base_url,
                                payload=payload,
-                               create_func=client.create_provider,
-                               get_func=client.get_provider_by_id)
+                               create_func=client.create_provider)
 
 
 def provider_delete(cmd, client, base_url, provider):
@@ -567,7 +584,7 @@ def provider_deploy(cmd, client, base_url, provider):
 # Util
 
 
-def _create_with_status(cmd, client, base_url, payload, create_func, get_func, project_id=None):
+def _create_with_status(cmd, client, base_url, payload, create_func, project_id=None):
     from azext_tc.vendored_sdks.teamcloud.models import StatusResult
     client._client.config.base_url = base_url
 
