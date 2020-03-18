@@ -9,13 +9,14 @@ from knack.arguments import CLIArgumentType
 from azure.cli.core.commands.parameters import (
     tags_type,
     get_enum_type,
-    get_location_type)
+    get_location_type,
+    resource_group_name_type)
 
 from azext_tc._validators import (
     project_name_validator, project_name_or_id_validator, user_name_validator, user_name_or_id_validator,
     tracking_id_validator, project_type_id_validator, project_type_id_validator_name, provider_id_validator,
-    subscriptions_list_validator, provider_event_list_validator, provider_create_dependencies_validator,
-    provider_init_dependencies_validator, url_validator, base_url_validator, auth_code_validator)
+    subscriptions_list_validator, provider_event_list_validator, provider_depends_on_validator, url_validator,
+    base_url_validator, auth_code_validator)
 
 from azext_tc._completers import (
     get_project_completion_list)
@@ -72,12 +73,14 @@ def load_arguments(self, _):
     # TeamCloud
 
     with self.argument_context('tc create') as c:
+        c.argument('resource_group_name', arg_type=resource_group_name_type, default='TeamCloud')
         c.argument('principal_name', help='Service principal name, or object id.')
         c.argument('principal_password', help="Service principal password, aka 'client secret'.")
 
     with self.argument_context('tc upgrade') as c:
         c.argument('version', options_list=['--version', '-v'],
                    type=str, help='TeamCloud release version.')
+        c.argument('resource_group_name', arg_type=resource_group_name_type, default='TeamCloud')
 
     with self.argument_context('tc status') as c:
         c.argument('project', project_name_or_id_type, completer=get_project_completion_list)
@@ -176,12 +179,9 @@ def load_arguments(self, _):
 
     for scope in ['tc provider create', 'tc provider deploy']:
         with self.argument_context(scope) as c:
-            c.argument('create_dependencies', nargs='+',
+            c.argument('depends_on', nargs='+',
                        help='Space-seperated provider ids.',
-                       validator=provider_create_dependencies_validator)
-            c.argument('init_dependencies', nargs='+',
-                       help='Space-seperated provider ids.',
-                       validator=provider_init_dependencies_validator)
+                       validator=provider_depends_on_validator)
             c.argument('events', nargs='+',
                        help='Space-seperated provider ids.',
                        validator=provider_event_list_validator)
@@ -197,3 +197,9 @@ def load_arguments(self, _):
     with self.argument_context('tc provider deploy') as c:
         c.argument('provider', get_enum_type(['providers.azure.appinsights', 'providers.azure.devops', 'providers.azure.devtestlabs']),
                    options_list=['--name', '-n'], help='Provider id.')
+        c.argument('resource_group_name',
+                   arg_type=resource_group_name_type, default='TeamCloud-Providers',
+                   help='Name of resource group.')
+        c.argument('teamcloud_resource_group_name', options_list=['--teamcloud-resource-group'],
+                   arg_type=resource_group_name_type, default='TeamCloud',
+                   help='Name of TeamCloud resource group.')

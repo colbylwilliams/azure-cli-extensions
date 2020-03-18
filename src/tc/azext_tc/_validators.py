@@ -130,18 +130,11 @@ def provider_event_list_validator(cmd, namespace):
                 '--events should be a space-separated list of valid provider ids, provider ids should start with a lowercase and contain only lowercase, numbers, and periods [.] with length [4,254]')
 
 
-def provider_create_dependencies_validator(cmd, namespace):
-    if namespace.create_dependencies:
-        if not all(_is_valid_provider_id(x) for x in namespace.create_dependencies):
+def provider_depends_on_validator(cmd, namespace):
+    if namespace.depends_on:
+        if not all(_is_valid_provider_id(x) for x in namespace.depends_on):
             raise CLIError(
-                '--create-dependencies should be a space-separated list of valid provider ids, provider ids should start with a lowercase and contain only lowercase, numbers, and periods [.] with length [4,254]')
-
-
-def provider_init_dependencies_validator(cmd, namespace):
-    if namespace.init_dependencies:
-        if not all(_is_valid_provider_id(x) for x in namespace.init_dependencies):
-            raise CLIError(
-                '--create-dependencies should be a space-separated list of valid provider ids, provider ids should start with a lowercase and contain only lowercase, numbers, and periods [.] with length [4,254]')
+                '--depends-on should be a space-separated list of valid provider ids, provider ids should start with a lowercase and contain only lowercase, numbers, and periods [.] with length [4,254]')
 
 
 def tc_resource_name_validator(cmd, namespace):

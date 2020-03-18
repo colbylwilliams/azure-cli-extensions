@@ -20,6 +20,16 @@ type: command
 short-summary: Create a new TeamCloud instance.
 """
 
+helps['tc upgrade'] = """
+type: command
+short-summary: Upgrade source version of a TeamCloud instance.
+examples:
+  - name: Upgrade a TeamCloud instance to the latest release.
+    text: az tc upgrade
+  - name: Upgrade a TeamCloud instance to a specific pre-release.
+    text: az tc upgrade -version v0.1.1-alpha.2
+"""
+
 helps['tc status'] = """
 type: command
 short-summary: Get the status of a long-running operation.
@@ -326,8 +336,7 @@ examples:
         --name azure.devtestlabs \\
         --url https://my-provider.azurewebsites.net \\
         --auth-code cmFuZG9tcmFuZG9tcmFuZG9tcmFuZG9tcmFuZG9tcmFuZG9tcmFuZA== \\
-        --create-dependencies azure.appinsights \\
-        --init-dependencies azure.appinsights \\
+        --depends-on azure.appinsights \\
         --events azure.devtestlabs azure.appinsights
 """
 
@@ -365,7 +374,6 @@ examples:
     text: |
       az tc provider deploy \\
         --name azure.devtestlabs \\
-        --create-dependencies azure.appinsights \\
-        --init-dependencies azure.appinsights \\
+        --depends-on azure.appinsights \\
         --events azure.devtestlabs azure.appinsights
 """

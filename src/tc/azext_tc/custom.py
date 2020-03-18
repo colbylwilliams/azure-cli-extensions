@@ -25,12 +25,12 @@ STATUS_POLLING_SLEEP_INTERVAL = 2
 # TeamCloud
 
 
-def teamcloud_create(cmd, client, name, location, principal_name=None, principal_password=None, tags=None):
+def teamcloud_create(cmd, client, name, location, resource_group_name=None, principal_name=None, principal_password=None, tags=None):
     # from azure.cli.core.util import random_string
     cli_ctx = cmd.cli_ctx
 
     location = location.lower()
-    rg_name = 'TeamCloud'
+    rg_name = resource_group_name or 'TeamCloud'
 
     logger.warning('Getting resource group...')
     rg, subscription_id = _get_resource_group_by_name(cli_ctx, rg_name)
@@ -58,7 +58,7 @@ def teamcloud_create(cmd, client, name, location, principal_name=None, principal
     logger.warning('Creating web jobs storage account...')
     wj_storage = _create_storage_account(cli_ctx, name_short + 'wjstorage', rg_name, location, tags)
 
-    logger.warning('Creating cosmos db account...')
+    logger.warning('Creating cosmos db account. This will take several minutes to complete...')
     cosmosdb = _create_cosmosdb_account(cli_ctx, name_short + 'database', rg_name, location, tags)
 
     if principal_name is None and principal_password is None:
@@ -104,15 +104,13 @@ def teamcloud_create(cmd, client, name, location, principal_name=None, principal
     return 'TeamCloud instance successfully created at: https://{}. Use `az configure --defaults tc-base-url=https://{}` to configure this as your default TeamCloud instance'.format(api_app.default_host_name, api_app.default_host_name)
 
 
-def teamcloud_upgrade(cmd, client, base_url, version=None):
-    rg_name = 'TeamCloud'
+def teamcloud_upgrade(cmd, client, base_url, resource_group_name=None, version=None):
+    rg_name = resource_group_name or 'TeamCloud'
 
     logger.warning('Getting resource group...')
-    rg, subscription_id = _get_resource_group_by_name(cmd.cli_ctx, rg_name)
+    rg, _ = _get_resource_group_by_name(cmd.cli_ctx, rg_name)
     if rg is None:
         raise CLIError("Resource Group 'TeamCLoud' must exist in current subscription.")
-
-    location = rg.location.lower()
 
     from re import match
 
@@ -129,10 +127,10 @@ def teamcloud_upgrade(cmd, client, base_url, version=None):
     logger.warning(name)
 
     version_string = version or 'latest'
-    logger.warning('Deploying orchestrator source code (version: {})...'.format(version_string))
+    logger.warning('Deploying orchestrator source code (version: %s)...', version_string)
     _zip_deploy_app(cmd.cli_ctx, rg_name, name + '-orchestrator', 'https://github.com/microsoft/TeamCloud', 'TeamCloud.Orchestrator', version=version)
 
-    logger.warning('Deploying api app source code (version: {})...'.format(version_string))
+    logger.warning('Deploying api app source code (version: %s)...', version_string)
     _zip_deploy_app(cmd.cli_ctx, rg_name, name, 'https://github.com/microsoft/TeamCloud', 'TeamCloud.API', version=version)
 
     return name
@@ -318,13 +316,10 @@ def project_type_get(cmd, client, base_url, project_type):
 
 # Providers
 
-def provider_create(cmd, client, base_url, provider, url, auth_code, create_dependencies=None, init_dependencies=None, events=None, properties=None):
+def provider_create(cmd, client, base_url, provider, url, auth_code, depends_on=None, events=None, properties=None):
     from azext_tc.vendored_sdks.teamcloud.models import Provider, ProviderDependenciesModel
 
-    dependencies = ProviderDependenciesModel(
-        create=create_dependencies,
-        init=init_dependencies
-    )
+    dependencies = ProviderDependenciesModel()
 
     payload = Provider(
         id=provider,
@@ -356,7 +351,7 @@ def provider_get(cmd, client, base_url, provider):
     return client.get_provider_by_id(provider)
 
 
-def provider_deploy(cmd, client, base_url, provider, create_dependencies=None, init_dependencies=None, events=None, properties=None):
+def provider_deploy(cmd, client, base_url, provider, resource_group_name=None, teamcloud_resource_group_name=None, depends_on=None, events=None, properties=None):
     client._client.config.base_url = base_url
     from azure.cli.core.util import random_string
     cli_ctx = cmd.cli_ctx
@@ -364,14 +359,13 @@ def provider_deploy(cmd, client, base_url, provider, create_dependencies=None, i
     # TODO: Get TeamCloud location, tags ect.
     tags = None
 
-    rg_name = 'TeamCloud-Providers'
-
-    # deployment_repo = 'https://github.com/microsoft/TeamCloud-Providers.git'
+    tc_rg_name = teamcloud_resource_group_name or 'TeamCloud'
+    rg_name = resource_group_name or 'TeamCloud-Providers'
 
     logger.warning('Getting TeamCloud resource group...')
-    teamcloud_rg, _ = _get_resource_group_by_name(cli_ctx, 'TeamCloud')
+    teamcloud_rg, _ = _get_resource_group_by_name(cli_ctx, tc_rg_name)
     if teamcloud_rg is None:
-        raise CLIError("Resource Group 'TeamCLoud' must exist in current subscription.")
+        raise CLIError("Resource Group '{}' must exist in current subscription.".format(tc_rg_name))
 
     logger.warning('Getting TeamCloud-Providers resource group...')
     rg, _ = _get_resource_group_by_name(cli_ctx, rg_name)
@@ -410,7 +404,7 @@ def provider_deploy(cmd, client, base_url, provider, create_dependencies=None, i
     logger.warning('Deploying provider source code...')
     _zip_deploy_app(cli_ctx, rg_name, name, 'https://github.com/microsoft/TeamCloud-Providers', zip_name, version=None, app_instance=functionapp)
 
-    return provider_create(cmd, client, base_url, provider, url, host_key, create_dependencies, init_dependencies, events, properties)
+    return provider_create(cmd, client, base_url, provider, url, host_key, depends_on, events, properties)
 
 
 # Util
@@ -826,7 +820,7 @@ def _zip_deploy_app(cli_ctx, resource_group_name, name, repo_url, zip_name, vers
     if version:
         zip_package_uri = '{}/releases/download/{}/{}.zip'.format(repo_url, version, zip_name)
 
-    logger.warning("Starting zip deployment. This operation can take a while to complete ...")
+    logger.warning("Starting zip deployment. This will take several minutes to complete...")
     res = requests.put(zipdeploy_url, headers=authorization, json={'packageUri': zip_package_uri}, verify=not should_disable_connection_verify())
 
     # check if there's an ongoing process
@@ -876,7 +870,7 @@ def _check_zip_deployment_status(cli_ctx, resource_group_name, name, deployment_
 # TODO: expose new blob suport
 def _configure_default_logging(cli_ctx, resource_group_name, name, slot=None, app_instance=None, level=None,
                                web_server_logging='filesystem', docker_container_logging='true'):
-    logger.warning("Configuring default logging for the app, if not already enabled")
+    logger.warning("Configuring default logging for the app, if not already enabled...")
     from azure.mgmt.web.models import (FileSystemApplicationLogsConfig, ApplicationLogsConfig,
                                        SiteLogsConfig, HttpLogsConfig, FileSystemHttpLogsConfig)
 
@@ -930,7 +924,10 @@ def _get_webapp(cli_ctx, resource_group_name, name, slot=None, app_instance=None
         raise CLIError("'{}' app doesn't exist".format(name))
 
     # Should be renamed in SDK in a future release
-    setattr(webapp, 'app_service_plan_id', webapp.server_farm_id)
-    del webapp.server_farm_id
+    try:
+        setattr(webapp, 'app_service_plan_id', webapp.server_farm_id)
+        del webapp.server_farm_id
+    except AttributeError:
+        pass
 
     return webapp
