@@ -18,6 +18,35 @@ logger = get_logger(__name__)
 # pylint: disable=unused-argument, protected-access
 
 
+def tc_create_validator(cmd, namespace):
+    if namespace.principal_name is not None:
+        if namespace.principal_password is None:
+            raise CLIError(
+                '--principal-password must be have a value if --principal-name is specified')
+    if namespace.principal_password is not None:
+        if namespace.principal_name is None:
+            raise CLIError(
+                '--principal-name must be have a value if --principal-password is specified')
+
+    if namespace.name is not None:
+        from azext_tc._client_factory import web_client_factory
+        # from azure.cli.core.profiles import ResourceType, get_sdk
+        # ResourceNameAvailability = get_sdk(cmd.cli_ctx, ResourceType.MGMT_APPSERVICE, 'ResourceNameAvailability', mod='models')
+
+        name_clean = ''
+        for n in namespace.name.lower():
+            if n.isalpha() or n.isdigit() or n == '-':
+                name_clean += n
+
+        namespace.name = name_clean
+
+        web_client = web_client_factory(cmd.cli_ctx)
+        availability = web_client.check_name_availability(namespace.name, 'Site')
+        if not availability.name_available:
+            raise CLIError(
+                '--name {}'.format(availability.message))
+
+
 def project_name_validator(cmd, namespace):
     if namespace.name is not None:
         if _is_valid_uuid(namespace.name):

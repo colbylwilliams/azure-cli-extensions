@@ -55,14 +55,10 @@ def load_arguments(self, _):
         c.argument('location', get_location_type(self.cli_ctx))
         c.argument('tags', tags_type)
 
-    # ignore global az arg --subscription for everything except `tc create` and `tc provider deploy`
-    for scope in ['tc status', 'tc user', 'tc project', 'tc project-type', 'tc provider create', 'tc provider show', 'tc provider delete', 'tc tag']:
+    # ignore global az arg --subscription and requre base_url for everything except `tc create`
+    for scope in ['tc status', 'tc upgrade', 'tc user', 'tc project', 'tc project-type', 'tc provider', 'tc tag']:
         with self.argument_context(scope, arg_group='TeamCloud Global') as c:
             c.ignore('_subscription')
-
-    # requre base_url arg for everything except `tc create` and `tc provider deploy`
-    for scope in ['tc status', 'tc user', 'tc project', 'tc project-type', 'tc provider', 'tc tag']:
-        with self.argument_context(scope, arg_group='TeamCloud Global') as c:
             c.argument('base_url', tc_url_type)
 
     for scope in ['tc tag create', 'tc project tag create']:
@@ -76,8 +72,12 @@ def load_arguments(self, _):
     # TeamCloud
 
     with self.argument_context('tc create') as c:
-        c.argument('config_yaml', options_list=['--config-yaml', '-c'],
-                   type=str, help='TeamCloud configuration yaml file.')
+        c.argument('principal_name', help='Service principal name, or object id.')
+        c.argument('principal_password', help="Service principal password, aka 'client secret'.")
+
+    with self.argument_context('tc upgrade') as c:
+        c.argument('version', options_list=['--version', '-v'],
+                   type=str, help='TeamCloud release version.')
 
     with self.argument_context('tc status') as c:
         c.argument('project', project_name_or_id_type, completer=get_project_completion_list)
@@ -173,17 +173,20 @@ def load_arguments(self, _):
                    validator=url_validator)
         c.argument('auth_code', type=str, help='Provider auth code.',
                    validator=auth_code_validator)
-        c.argument('create_dependencies', nargs='+',
-                   help='Space-seperated provider ids.',
-                   validator=provider_create_dependencies_validator)
-        c.argument('init_dependencies', nargs='+',
-                   help='Space-seperated provider ids.',
-                   validator=provider_init_dependencies_validator)
-        c.argument('events', nargs='+',
-                   help='Space-seperated provider ids.',
-                   validator=provider_event_list_validator)
-        c.argument('properties', tags_type,
-                   help="Space-separated properties: key[=value][key[=value] ...]. Use '' to clear existing properties.")
+
+    for scope in ['tc provider create', 'tc provider deploy']:
+        with self.argument_context(scope) as c:
+            c.argument('create_dependencies', nargs='+',
+                       help='Space-seperated provider ids.',
+                       validator=provider_create_dependencies_validator)
+            c.argument('init_dependencies', nargs='+',
+                       help='Space-seperated provider ids.',
+                       validator=provider_init_dependencies_validator)
+            c.argument('events', nargs='+',
+                       help='Space-seperated provider ids.',
+                       validator=provider_event_list_validator)
+            c.argument('properties', tags_type,
+                       help="Space-separated properties: key[=value][key[=value] ...]. Use '' to clear existing properties.")
 
     for scope in ['tc provider show', 'tc provider delete']:
         with self.argument_context(scope) as c:
@@ -192,6 +195,5 @@ def load_arguments(self, _):
                        validator=provider_id_validator)
 
     with self.argument_context('tc provider deploy') as c:
-        c.argument('provider', get_enum_type(['azure.devops', 'azure.devtestlabs', 'azure.appinsights']),
-                   options_list=['--name', '-n'], help='Provider id.',
-                   validator=provider_id_validator)
+        c.argument('provider', get_enum_type(['providers.azure.appinsights', 'providers.azure.devops', 'providers.azure.devtestlabs']),
+                   options_list=['--name', '-n'], help='Provider id.')
