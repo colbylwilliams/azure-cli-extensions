@@ -154,7 +154,7 @@ def load_arguments(self, _):
         c.argument('resource_group_name_prefix', type=str,
                    help='Prepended to all project resource group names.')
         c.argument('provider', nargs='+', action=CreateProviderReference,
-                   help='Project type provider: provider_id [key=value ...].  Use multiple --provider arguemnts to specify multiple providers.')
+                   help='Project type provider: provider_id [key=value ...]. Use depends_on key to define dependencies. Use multiple --provider arguemnts to specify multiple providers.')
         c.argument('tags', tags_type)
         c.argument('properties', tags_type,
                    help="Space-separated properties: key[=value][key[=value] ...]. Use '' to clear existing properties.")
@@ -179,9 +179,6 @@ def load_arguments(self, _):
 
     for scope in ['tc provider create', 'tc provider deploy']:
         with self.argument_context(scope) as c:
-            c.argument('depends_on', nargs='+',
-                       help='Space-seperated provider ids.',
-                       validator=provider_depends_on_validator)
             c.argument('events', nargs='+',
                        help='Space-seperated provider ids.',
                        validator=provider_event_list_validator)

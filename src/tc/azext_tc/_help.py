@@ -287,7 +287,7 @@ examples:
         --subscription-capacity 5 \\
         --resource-group-name-prefix TC_ \\
         --provider my.provider.id.one prop1=val1 prop2=val2 \\
-        --provider my.provider.id.two prop3=val3 prop4=val4 \\
+        --provider my.provider.id.two prop3=val3 prop4=val4 depends_on=my.provider.id.one \\
         --default
 """
 
@@ -336,7 +336,6 @@ examples:
         --name azure.devtestlabs \\
         --url https://my-provider.azurewebsites.net \\
         --auth-code cmFuZG9tcmFuZG9tcmFuZG9tcmFuZG9tcmFuZG9tcmFuZG9tcmFuZA== \\
-        --depends-on azure.appinsights \\
         --events azure.devtestlabs azure.appinsights
 """
 
@@ -374,6 +373,5 @@ examples:
     text: |
       az tc provider deploy \\
         --name azure.devtestlabs \\
-        --depends-on azure.appinsights \\
         --events azure.devtestlabs azure.appinsights
 """

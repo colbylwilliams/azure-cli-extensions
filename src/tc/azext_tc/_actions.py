@@ -30,13 +30,17 @@ class CreateProviderReference(argparse._AppendAction):
                 raise CLIError(
                     'usage error: {} PROVIDER_ID [KEY=VALUE ...] PROVIDER_ID should start with a lowercase and contain only lowercase, numbers, and periods [.] with length [4,254]'.format(option_string or '--provider'))
 
+            provider_depends_on = []
             provider_properties = {}
 
             for item in values:
                 key, value = item.split('=', 1)
-                provider_properties[key] = value
+                if key.lower() == 'depends-on' or key.lower() == 'dependson' or key.lower() == 'depends_on':
+                    provider_depends_on.append(value)
+                else:
+                    provider_properties[key] = value
 
-            namespace.providers.append(ProviderReference(id=provider_id, properties=provider_properties))
+            namespace.providers.append(ProviderReference(id=provider_id, properties=provider_properties, depends_on=provider_depends_on))
 
         except IndexError:
             raise CLIError('usage error: {} PROVIDER_ID [KEY=VALUE ...]'.format(option_string or '--provider'))

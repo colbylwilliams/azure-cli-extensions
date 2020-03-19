@@ -316,16 +316,13 @@ def project_type_get(cmd, client, base_url, project_type):
 
 # Providers
 
-def provider_create(cmd, client, base_url, provider, url, auth_code, depends_on=None, events=None, properties=None):
-    from azext_tc.vendored_sdks.teamcloud.models import Provider, ProviderDependenciesModel
-
-    dependencies = ProviderDependenciesModel()
+def provider_create(cmd, client, base_url, provider, url, auth_code, events=None, properties=None):
+    from azext_tc.vendored_sdks.teamcloud.models import Provider
 
     payload = Provider(
         id=provider,
         url=url,
         auth_code=auth_code,
-        dependencies=dependencies,
         events=events,
         properties=properties,
     )
@@ -351,7 +348,7 @@ def provider_get(cmd, client, base_url, provider):
     return client.get_provider_by_id(provider)
 
 
-def provider_deploy(cmd, client, base_url, provider, resource_group_name=None, teamcloud_resource_group_name=None, depends_on=None, events=None, properties=None):
+def provider_deploy(cmd, client, base_url, provider, resource_group_name=None, teamcloud_resource_group_name=None, events=None, properties=None):
     client._client.config.base_url = base_url
     from azure.cli.core.util import random_string
     cli_ctx = cmd.cli_ctx
@@ -404,7 +401,7 @@ def provider_deploy(cmd, client, base_url, provider, resource_group_name=None, t
     logger.warning('Deploying provider source code...')
     _zip_deploy_app(cli_ctx, rg_name, name, 'https://github.com/microsoft/TeamCloud-Providers', zip_name, version=None, app_instance=functionapp)
 
-    return provider_create(cmd, client, base_url, provider, url, host_key, depends_on, events, properties)
+    return provider_create(cmd, client, base_url, provider, url, host_key, events, properties)
 
 
 # Util
