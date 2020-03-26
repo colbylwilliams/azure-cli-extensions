@@ -13,13 +13,28 @@ from azure.cli.testsdk import (ScenarioTest, ResourceGroupPreparer)
 TEST_DIR = os.path.abspath(os.path.join(os.path.abspath(__file__), '..'))
 
 
-class TcScenarioTest(ScenarioTest):
+# class TeamCloudLiveScenarioTest(LiveScenarioTest):
 
-    @ResourceGroupPreparer(name_prefix='cli_test_tc')
-    def test_tc(self, resource_group):
+#     def test_tc_project(self):
+#         self.kwargs.update({
+#             'url': 'http://localhost:5001',
+#             'name': self.create_random_name(prefix='cli', length=10)
+#         })
 
+#         project_name = self.create_random_name(prefix='cli', length=10)
+
+#         self.cmd('az tc project create -u {url} -n {name} --tags foo=bar', checks=[
+#             self.check('tags.foo', 'bar'),
+#             self.check('name', '{name}')
+#         ]
+
+class TeamCloudScenarioTest(ScenarioTest):
+
+    @ResourceGroupPreparer(name_prefix='CLI_TESTS_', parameter_name_for_location='location')
+    def test_tc(self, resource_group, location):
         self.kwargs.update({
-            'name': 'test1'
+            'name': 'test1',
+            'loc': location
         })
 
         self.cmd('tc create -g {rg} -n {name} --tags foo=doo', checks=[

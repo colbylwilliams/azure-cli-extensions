@@ -25,8 +25,10 @@ STATUS_POLLING_SLEEP_INTERVAL = 2
 # TeamCloud
 
 
-def teamcloud_create(cmd, client, name, location, resource_group_name=None, principal_name=None, principal_password=None, tags=None):
+def teamcloud_create(cmd, client, name, location, resource_group_name=None, principal_name=None, principal_password=None, tags=None, skip_deploy=False):
     # from azure.cli.core.util import random_string
+    from azure.cli.core._profile import Profile
+
     cli_ctx = cmd.cli_ctx
 
     location = location.lower()
@@ -61,15 +63,13 @@ def teamcloud_create(cmd, client, name, location, resource_group_name=None, prin
     logger.warning('Creating cosmos db account. This will take several minutes to complete...')
     cosmosdb = _create_cosmosdb_account(cli_ctx, name_short + 'database', rg_name, location, tags)
 
+    profile = Profile(cli_ctx=cli_ctx)
+
     if principal_name is None and principal_password is None:
         logger.warning('Creating aad app registration...')
         resource_manager_sp = _create_resource_manager_sp(cmd)
     else:
-        # _resolve_service_principal
-        from azure.cli.core._profile import Profile
-        profile = Profile(cli_ctx=cli_ctx)
-        _, _, tenant_id = profile.get_login_credentials(
-            resource=cli_ctx.cloud.endpoints.active_directory_graph_resource_id)
+        _, _, tenant_id = profile.get_login_credentials(resource=cli_ctx.cloud.endpoints.active_directory_graph_resource_id)
         resource_manager_sp = {
             'appId': principal_name,
             'password': principal_password,
@@ -82,10 +82,9 @@ def teamcloud_create(cmd, client, name, location, resource_group_name=None, prin
     logger.warning('Adding resource info to app configuration service...')
     _set_appconfig_keys(cli_ctx, subscription_id, resource_manager_sp, appconfig, cosmosdb, dep_storage)
 
-    orchestrator_project = 'src/TeamCloud.Orchestrator/TeamCloud.Orchestrator.csproj'
     logger.warning('Creating orchestrator function app...')
     orchestrator, orchestrator_host_key = _create_function_app(cli_ctx, name + '-orchestrator', rg_name, location,
-                                                               orchestrator_project, wj_storage, th_storage, appconfig, appinsights, tags)
+                                                               wj_storage, th_storage, appconfig, appinsights, tags)
 
     logger.warning('Adding orchestrator info to app configuration service...')
     _set_appconfig_orchestrator_keys(cli_ctx, subscription_id, appconfig, orchestrator, orchestrator_host_key)
@@ -93,15 +92,29 @@ def teamcloud_create(cmd, client, name, location, resource_group_name=None, prin
     logger.warning('Creating api app service...')
     api_app = _create_api_app(cli_ctx, name, rg_name, location, appconfig, appinsights, tags)
 
-    logger.warning('Deploying orchestrator source code...')
-    _zip_deploy_app(cli_ctx, rg_name, name + '-orchestrator', 'https://github.com/microsoft/TeamCloud', 'TeamCloud.Orchestrator', version=None, app_instance=orchestrator)
+    logger.warning('Successfully deployed Azure resources for TeamCloud')
 
-    logger.warning('Deploying api app source code...')
-    _zip_deploy_app(cli_ctx, rg_name, name, 'https://github.com/microsoft/TeamCloud', 'TeamCloud.API', version=None, app_instance=api_app)
+    if skip_deploy:
+        logger.warning('IMPORTANT: --skip-deploy prevented source code for the TeamCloud instance deployment. To deploy the applicaitons use `az tc upgrade`.')
 
-    logger.warning('Successfully created TeamCloud instance.')
+    else:
+        logger.warning('Deploying orchestrator source code...')
+        # _zip_deploy_app(cli_ctx, rg_name, name + '-orchestrator', 'https://github.com/microsoft/TeamCloud', 'TeamCloud.Orchestrator', version=None, app_instance=orchestrator)
+        _zip_deploy_app(cli_ctx, rg_name, name + '-orchestrator', 'https://github.com/microsoft/TeamCloud',
+                        'TeamCloud.Orchestrator', version='v0.1.1-alpha.1', app_instance=orchestrator)
 
-    return 'TeamCloud instance successfully created at: https://{}. Use `az configure --defaults tc-base-url=https://{}` to configure this as your default TeamCloud instance'.format(api_app.default_host_name, api_app.default_host_name)
+        logger.warning('Deploying api app source code...')
+        # _zip_deploy_app(cli_ctx, rg_name, name, 'https://github.com/microsoft/TeamCloud', 'TeamCloud.API', version=None, app_instance=api_app)
+        _zip_deploy_app(cli_ctx, rg_name, name, 'https://github.com/microsoft/TeamCloud', 'TeamCloud.API', version='v0.1.1-alpha.1', app_instance=api_app)
+
+        logger.warning('Successfully created TeamCloud instance.')
+        base_url = 'https://{}'.format(api_app.default_host_name)
+
+        logger.warning('Creating admin user...')
+        me = profile.get_current_account_user()
+        user = teamcloud_user_create(cmd, client, base_url, me, user_role='Admin')
+
+    return 'TeamCloud instance successfully created at: {}. Use `az configure --defaults tc-base-url={}` to configure this as your default TeamCloud instance'.format(base_url, base_url)
 
 
 def teamcloud_upgrade(cmd, client, base_url, resource_group_name=None, version=None):
@@ -124,13 +137,12 @@ def teamcloud_upgrade(cmd, client, base_url, resource_group_name=None, version=N
     if name is None or '':
         raise CLIError("Unable to get app name from base url.")
 
-    logger.warning(name)
+    # logger.warning(name)
 
-    version_string = version or 'latest'
-    logger.warning('Deploying orchestrator source code (version: %s)...', version_string)
+    logger.warning('Deploying orchestrator source code (version: %s)...', version)
     _zip_deploy_app(cmd.cli_ctx, rg_name, name + '-orchestrator', 'https://github.com/microsoft/TeamCloud', 'TeamCloud.Orchestrator', version=version)
 
-    logger.warning('Deploying api app source code (version: %s)...', version_string)
+    logger.warning('Deploying api app source code (version: %s)...', version)
     _zip_deploy_app(cmd.cli_ctx, rg_name, name, 'https://github.com/microsoft/TeamCloud', 'TeamCloud.API', version=version)
 
     return name
@@ -348,7 +360,7 @@ def provider_get(cmd, client, base_url, provider):
     return client.get_provider_by_id(provider)
 
 
-def provider_deploy(cmd, client, base_url, provider, resource_group_name=None, teamcloud_resource_group_name=None, events=None, properties=None):
+def provider_deploy(cmd, client, base_url, provider, version=None, resource_group_name=None, teamcloud_resource_group_name=None, events=None, properties=None):
     client._client.config.base_url = base_url
     from azure.cli.core.util import random_string
     cli_ctx = cmd.cli_ctx
@@ -380,26 +392,22 @@ def provider_deploy(cmd, client, base_url, provider, resource_group_name=None, t
     wj_storage = _create_storage_account(cli_ctx, name + 'wjstorage', rg_name, location, tags)
 
     zip_name = None
-    project = None
-    if provider is 'providers.azure.appinsights':
+    if provider == 'azure.appinsights':
         zip_name = 'TeamCloud.Providers.Azure.AppInsights'
-        project = 'Azure/TeamCloud.Providers.Azure.AppInsights/TeamCloud.Providers.Azure.AppInsights.csproj'
-    if provider is 'providers.azure.devops':
+    if provider == 'azure.devops':
         zip_name = 'TeamCloud.Providers.Azure.DevOps'
-        project = 'Azure/TeamCloud.Providers.Azure.DevOps/TeamCloud.Providers.Azure.DevOps.csproj'
-    if provider is 'providers.azure.devtestlabs':
+    if provider == 'azure.devtestlabs':
         zip_name = 'TeamCloud.Providers.Azure.DevTestLabs'
-        project = 'Azure/TeamCloud.Providers.Azure.DevTestLabs/TeamCloud.Providers.Azure.DevTestLabs.csproj'
 
-    if project is None:
-        raise CLIError("--providers is invalid.  Must be one of 'providers.azure.appinsights', 'providers.azure.devops', 'providers.azure.devtestlabs'")
+    if zip_name is None:
+        raise CLIError("--providers is invalid.  Must be one of 'azure.appinsights', 'azure.devops', 'azure.devtestlabs'")
 
-    functionapp, host_key = _create_function_app(cli_ctx, name, rg_name, location, project, wj_storage, th_storage, tags=tags)
+    functionapp, host_key = _create_function_app(cli_ctx, name, rg_name, location, wj_storage, th_storage, tags=tags)
 
     url = 'https://{}'.format(functionapp.default_host_name)
 
     logger.warning('Deploying provider source code...')
-    _zip_deploy_app(cli_ctx, rg_name, name, 'https://github.com/microsoft/TeamCloud-Providers', zip_name, version=None, app_instance=functionapp)
+    _zip_deploy_app(cli_ctx, rg_name, name, 'https://github.com/microsoft/TeamCloud-Providers', zip_name, version=version, app_instance=functionapp)
 
     return provider_create(cmd, client, base_url, provider, url, host_key, events, properties)
 
@@ -643,8 +651,6 @@ def _create_api_app(cli_ctx, name, resource_group_name, location, appconfig, app
 
     site_config.connection_strings.append(ConnStringInfo(name='ConfigurationService', connection_string=appconfig[2]))
 
-    # https://github.com/projectkudu/kudu/wiki/Customizing-deployments#using-app-settings-instead-of-a-deployment-file
-    site_config.app_settings.append(NameValuePair(name="PROJECT", value='src/TeamCloud.API/TeamCloud.API.csproj'))
     site_config.app_settings.append(NameValuePair(name="WEBSITE_NODE_DEFAULT_VERSION", value='10.14'))
     site_config.app_settings.append(NameValuePair(name='ANCM_ADDITIONAL_ERROR_PAGE_LINK', value='https://{}.scm.azurewebsites.net/detectors'.format(name)))
     site_config.app_settings.append(NameValuePair(name='ApplicationInsightsAgent_EXTENSION_VERSION', value='~2'))
@@ -660,7 +666,7 @@ def _create_api_app(cli_ctx, name, resource_group_name, location, appconfig, app
     return webapp
 
 
-def _create_function_app(cli_ctx, name, resource_group_name, location, project, wj_storage, th_storage, appconfig=None, app_insights=None, tags=None):
+def _create_function_app(cli_ctx, name, resource_group_name, location, wj_storage, th_storage, appconfig=None, app_insights=None, tags=None):
     from azext_tc._client_factory import web_client_factory
     from azure.cli.core.util import send_raw_request
     SiteConfig, Site, NameValuePair, ConnStringInfo = get_sdk(
@@ -681,8 +687,6 @@ def _create_function_app(cli_ctx, name, resource_group_name, location, project, 
     if appconfig is not None:
         site_config.connection_strings.append(ConnStringInfo(name='ConfigurationService', connection_string=appconfig[2]))
 
-    # https://github.com/projectkudu/kudu/wiki/Customizing-deployments#using-app-settings-instead-of-a-deployment-file
-    site_config.app_settings.append(NameValuePair(name='PROJECT', value='src/TeamCloud.Orchestrator/TeamCloud.Orchestrator.csproj'))
     # adding appsetting to site to make it a function
     site_config.app_settings.append(NameValuePair(name='FUNCTIONS_EXTENSION_VERSION', value='~3'))
     site_config.app_settings.append(NameValuePair(name='AzureWebJobsStorage', value=wj_storage[2]))
@@ -814,7 +818,14 @@ def _zip_deploy_app(cli_ctx, resource_group_name, name, repo_url, zip_name, vers
     authorization = urllib3.util.make_headers(basic_auth='{}:{}'.format(creds.publishing_user_name, creds.publishing_password))
 
     zip_package_uri = '{}/releases/latest/download/{}.zip'.format(repo_url, zip_name)
+
     if version:
+        version = version.lower()
+        from re import match
+        m = match(r'^[vV]?[0-9]+\.[0-9]+\.[0-9]+$', version)
+        if m is None:
+            raise CLIError('--version should be in format v0.0.0 do not include -pre suffix')
+
         zip_package_uri = '{}/releases/download/{}/{}.zip'.format(repo_url, version, zip_name)
 
     logger.warning("Starting zip deployment. This will take several minutes to complete...")

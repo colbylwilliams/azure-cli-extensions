@@ -76,6 +76,7 @@ def load_arguments(self, _):
         c.argument('resource_group_name', arg_type=resource_group_name_type, default='TeamCloud')
         c.argument('principal_name', help='Service principal name, or object id.')
         c.argument('principal_password', help="Service principal password, aka 'client secret'.")
+        c.argument('skip_deploy', action='store_true', help="Only create Azure resources, skip deploying the TeamCloud API and Orchestrator.")
 
     with self.argument_context('tc upgrade') as c:
         c.argument('version', options_list=['--version', '-v'],
@@ -192,8 +193,10 @@ def load_arguments(self, _):
                        validator=provider_id_validator)
 
     with self.argument_context('tc provider deploy') as c:
-        c.argument('provider', get_enum_type(['providers.azure.appinsights', 'providers.azure.devops', 'providers.azure.devtestlabs']),
+        c.argument('provider', get_enum_type(['azure.appinsights', 'azure.devops', 'azure.devtestlabs']),
                    options_list=['--name', '-n'], help='Provider id.')
+        c.argument('version', options_list=['--version', '-v'],
+                   type=str, help='Provider release version.')
         c.argument('resource_group_name',
                    arg_type=resource_group_name_type, default='TeamCloud-Providers',
                    help='Name of resource group.')

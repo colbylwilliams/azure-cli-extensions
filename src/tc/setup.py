@@ -14,27 +14,24 @@ except ImportError:
     from distutils import log as logger
     logger.warn("Wheel is not available, disabling bdist_wheel hook")
 
-# TODO: Confirm this is the right version number you want and it matches your
-# HISTORY.rst entry.
-VERSION = '0.1.0'
+# Must match a HISTORY.rst entry.
+VERSION = '0.2.0'
 
 # The full list of classifiers is available at
 # https://pypi.python.org/pypi?%3Aaction=list_classifiers
 CLASSIFIERS = [
-    'Development Status :: 4 - Beta',
+    'Development Status :: 3 - Alpha',
     'Intended Audience :: Developers',
     'Intended Audience :: System Administrators',
     'Programming Language :: Python',
-    'Programming Language :: Python :: 2',
-    'Programming Language :: Python :: 2.7',
     'Programming Language :: Python :: 3',
-    'Programming Language :: Python :: 3.4',
     'Programming Language :: Python :: 3.5',
     'Programming Language :: Python :: 3.6',
+    'Programming Language :: Python :: 3.7',
+    'Programming Language :: Python :: 3.8',
     'License :: OSI Approved :: MIT License',
 ]
 
-# TODO: Add any additional SDK dependencies here
 DEPENDENCIES = [
     'azure-cli-core'
 ]
@@ -47,14 +44,12 @@ with open('HISTORY.rst', 'r', encoding='utf-8') as f:
 setup(
     name='tc',
     version=VERSION,
-    description='Microsoft Azure Command-Line Tools Tc Extension',
-    # TODO: Update author and email, if applicable
-    author='Microsoft Corporation',
-    author_email='azpycli@microsoft.com',
-    # TODO: consider pointing directly to your source code instead of the generic repo
-    url='https://github.com/Azure/azure-cli-extensions',
-    long_description=README + '\n\n' + HISTORY,
+    description='Microsoft Azure Command-Line Tools TeamCloud Extension',
     license='MIT',
+    author='Microsoft Corporation',
+    author_email='colbyw@microsoft.com',
+    url='https://github.com/microsoft/TeamCloud',
+    long_description=README + '\n\n' + HISTORY,
     classifiers=CLASSIFIERS,
     packages=find_packages(),
     install_requires=DEPENDENCIES,
