@@ -7,7 +7,7 @@ from azure.cli.core.commands.client_factory import get_mgmt_service_client
 
 
 def teamcloud_client_factory(cli_ctx, *_):
-    from azext_tc.vendored_sdks.teamcloud import TeamCloudClient
+    from .vendored_sdks.teamcloud import TeamCloudClient
     return get_mgmt_service_client(cli_ctx, TeamCloudClient, subscription_bound=False, base_url_bound=False)
 
 

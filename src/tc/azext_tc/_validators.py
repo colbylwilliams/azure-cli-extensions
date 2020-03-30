@@ -7,11 +7,12 @@
 
 # Example of a storage account name or ID validator.
 # See: https://github.com/Azure/azure-cli/blob/dev/doc/authoring_command_modules/authoring_commands.md#supporting-name-or-id-parameters
+
 from re import match
 from uuid import UUID
 from azure.cli.core.util import CLIError
 from knack.log import get_logger
-from azext_tc.vendored_sdks.teamcloud.models import ErrorResult
+from .vendored_sdks.teamcloud.models import ErrorResult
 
 logger = get_logger(__name__)
 
@@ -29,7 +30,7 @@ def tc_create_validator(cmd, namespace):
                 '--principal-name must be have a value if --principal-password is specified')
 
     if namespace.name is not None:
-        from azext_tc._client_factory import web_client_factory
+        from ._client_factory import web_client_factory
         # from azure.cli.core.profiles import ResourceType, get_sdk
         # ResourceNameAvailability = get_sdk(cmd.cli_ctx, ResourceType.MGMT_APPSERVICE, 'ResourceNameAvailability', mod='models')
 

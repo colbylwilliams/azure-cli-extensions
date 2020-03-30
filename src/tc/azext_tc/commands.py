@@ -4,10 +4,10 @@
 # --------------------------------------------------------------------------------------------
 
 # pylint: disable=line-too-long
-from azext_tc._client_factory import teamcloud_client_factory
-from azext_tc._transformers import (transform_output, transform_user_table_output, transform_project_table_output,
-                                    transform_project_type_table_output, transform_provider_table_output, transform_tag_table_output)
-from azext_tc._validators import tc_create_validator
+from ._client_factory import teamcloud_client_factory
+from ._transformers import (transform_output, transform_user_table_output, transform_project_table_output,
+                            transform_project_type_table_output, transform_provider_table_output, transform_tag_table_output)
+from ._validators import tc_create_validator
 
 
 def load_command_table(self, _):

@@ -27,7 +27,7 @@ examples:
   - name: Upgrade a TeamCloud instance to the latest release.
     text: az tc upgrade
   - name: Upgrade a TeamCloud instance to a specific pre-release.
-    text: az tc upgrade -version v0.1.1-alpha.2
+    text: az tc upgrade --version v0.1.1
 """
 
 helps['tc status'] = """
@@ -374,4 +374,10 @@ examples:
       az tc provider deploy \\
         --name azure.devtestlabs \\
         --events azure.devtestlabs azure.appinsights
+  - name: Deploy a provider to a specific pre-release.
+    text: az tc provider deploy \\
+        --name azure.devtestlabs \\
+        --events azure.devtestlabs azure.appinsights
+        --version v0.1.1
+
 """

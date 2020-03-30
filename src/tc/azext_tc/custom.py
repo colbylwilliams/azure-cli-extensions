@@ -24,8 +24,7 @@ STATUS_POLLING_SLEEP_INTERVAL = 2
 
 # TeamCloud
 
-
-def teamcloud_create(cmd, client, name, location, resource_group_name=None, principal_name=None, principal_password=None, tags=None, skip_deploy=False):
+def teamcloud_create(cmd, client, name, location, resource_group_name=None, principal_name=None, principal_password=None, tags=None, skip_deploy=False):  # pylint: disable=too-many-statements
     # from azure.cli.core.util import random_string
     from azure.cli.core._profile import Profile
 
@@ -112,9 +111,9 @@ def teamcloud_create(cmd, client, name, location, resource_group_name=None, prin
 
         logger.warning('Creating admin user...')
         me = profile.get_current_account_user()
-        user = teamcloud_user_create(cmd, client, base_url, me, user_role='Admin')
+        _ = teamcloud_user_create(cmd, client, base_url, me, user_role='Admin')
 
-    return 'TeamCloud instance successfully created at: {}. Use `az configure --defaults tc-base-url={}` to configure this as your default TeamCloud instance'.format(base_url, base_url)
+    return 'TeamCloud instance successfully created at: {0}. Use `az configure --defaults tc-base-url={0}` to configure this as your default TeamCloud instance'.format(base_url)
 
 
 def teamcloud_upgrade(cmd, client, base_url, resource_group_name=None, version=None):
@@ -156,7 +155,7 @@ def status_get(cmd, client, base_url, tracking_id, project=None):
 # TeamCloud Users
 
 def teamcloud_user_create(cmd, client, base_url, user_name, user_role='Creator', tags=None):
-    from azext_tc.vendored_sdks.teamcloud.models import UserDefinition
+    from .vendored_sdks.teamcloud.models import UserDefinition
     user_definition = UserDefinition(
         email=user_name, role=user_role, tags=tags)
     return _create_with_status(cmd=cmd,
@@ -211,7 +210,7 @@ def teamcloud_tag_get(cmd, client, base_url, tag_key):
 # Projects
 
 def project_create(cmd, client, base_url, name, project_type=None, tags=None):
-    from azext_tc.vendored_sdks.teamcloud.models import ProjectDefinition
+    from .vendored_sdks.teamcloud.models import ProjectDefinition
     project_definition = ProjectDefinition(
         name=name, project_type=project_type, tags=tags)
     return _create_with_status(cmd=cmd,
@@ -239,7 +238,7 @@ def project_get(cmd, client, base_url, project):
 # Project Users
 
 def project_user_create(cmd, client, base_url, project, user_name, user_role='Member', tags=None):
-    from azext_tc.vendored_sdks.teamcloud.models import UserDefinition
+    from .vendored_sdks.teamcloud.models import UserDefinition
     user_definition = UserDefinition(
         email=user_name, role=user_role, tags=tags)
     return _create_with_status(cmd=cmd,
@@ -296,7 +295,7 @@ def project_tag_get(cmd, client, base_url, project, tag_key):
 # Project Types
 
 def project_type_create(cmd, client, base_url, project_type, subscriptions, provider, providers, location=None, subscription_capacity=10, resource_group_name_prefix=None, tags=None, properties=None, default=False):
-    from azext_tc.vendored_sdks.teamcloud.models import ProjectType
+    from .vendored_sdks.teamcloud.models import ProjectType
     client._client.config.base_url = base_url
     proj_type = ProjectType(
         id=project_type,
@@ -329,7 +328,7 @@ def project_type_get(cmd, client, base_url, project_type):
 # Providers
 
 def provider_create(cmd, client, base_url, provider, url, auth_code, events=None, properties=None):
-    from azext_tc.vendored_sdks.teamcloud.models import Provider
+    from .vendored_sdks.teamcloud.models import Provider
 
     payload = Provider(
         id=provider,
@@ -415,7 +414,7 @@ def provider_deploy(cmd, client, base_url, provider, version=None, resource_grou
 # Util
 
 def _create_with_status(cmd, client, base_url, payload, create_func, project_id=None):
-    from azext_tc.vendored_sdks.teamcloud.models import StatusResult
+    from .vendored_sdks.teamcloud.models import StatusResult
     client._client.config.base_url = base_url
 
     type_name = create_func.metadata['url'].split('/')[-1][:-1].capitalize()
@@ -457,7 +456,7 @@ def _create_with_status(cmd, client, base_url, payload, create_func, project_id=
 
 
 def _delete_with_status(cmd, client, base_url, item_id, delete_func, project_id=None, **kwargs):
-    from azext_tc.vendored_sdks.teamcloud.models import StatusResult
+    from .vendored_sdks.teamcloud.models import StatusResult
     client._client.config.base_url = base_url
 
     type_name = delete_func.metadata['url'].split('/')[-2][:-1].capitalize()
@@ -499,7 +498,7 @@ def _delete_with_status(cmd, client, base_url, item_id, delete_func, project_id=
 
 
 def _get_resource_group_by_name(cli_ctx, resource_group_name):
-    from azext_tc._client_factory import resource_client_factory
+    from ._client_factory import resource_client_factory
     try:
         resouce_client = resource_client_factory(cli_ctx).resource_groups
         return resouce_client.get(resource_group_name), resouce_client.config.subscription_id
@@ -511,7 +510,7 @@ def _get_resource_group_by_name(cli_ctx, resource_group_name):
 
 
 def _create_resource_group_name(cli_ctx, resource_group_name, location, tags=None):
-    from azext_tc._client_factory import resource_client_factory
+    from ._client_factory import resource_client_factory
     ResourceGroup = get_sdk(
         cli_ctx, ResourceType.MGMT_RESOURCE_RESOURCES, 'ResourceGroup', mod='models')
     resource_client = resource_client_factory(cli_ctx).resource_groups
@@ -520,7 +519,7 @@ def _create_resource_group_name(cli_ctx, resource_group_name, location, tags=Non
 
 
 def _create_storage_account(cli_ctx, name, resource_group_name, location, tags):
-    from azext_tc._client_factory import storage_client_factory
+    from ._client_factory import storage_client_factory
     from azure.mgmt.storage.models import Sku, SkuName, StorageAccountCreateParameters
     params = StorageAccountCreateParameters(sku=Sku(name=SkuName.standard_ragrs),
                                             kind='StorageV2',
@@ -544,7 +543,7 @@ def _create_storage_account(cli_ctx, name, resource_group_name, location, tags):
 
 
 def _create_cosmosdb_account(cli_ctx, name, resource_group_name, location, tags=None):
-    from azext_tc._client_factory import cosmosdb_client_factory
+    from ._client_factory import cosmosdb_client_factory
     from azure.mgmt.cosmosdb.models import DatabaseAccountKind, Location, DatabaseAccountCreateUpdateParameters
     locations = []
     locations.append(Location(location_name=location, failover_priority=0, is_zone_redundant=False))
@@ -566,7 +565,7 @@ def _create_cosmosdb_account(cli_ctx, name, resource_group_name, location, tags=
 
 
 def _create_appconfig(cli_ctx, name, resource_group_name, location, tags=None):
-    from azext_tc._client_factory import appconfig_client_factory
+    from ._client_factory import appconfig_client_factory
     from azure.mgmt.appconfiguration.models import ConfigurationStore, Sku
     params = ConfigurationStore(location=location.lower(),
                                 identity=None,
@@ -632,7 +631,7 @@ def _set_appconfig_orchestrator_keys(cli_ctx, subscription_id, appconfig, orches
 
 
 def _create_api_app(cli_ctx, name, resource_group_name, location, appconfig, app_insights, tags=None):
-    from azext_tc._client_factory import web_client_factory
+    from ._client_factory import web_client_factory
     SkuDescription, AppServicePlan, SiteConfig, Site, NameValuePair, ConnStringInfo = get_sdk(
         cli_ctx, ResourceType.MGMT_APPSERVICE, 'SkuDescription', 'AppServicePlan', 'SiteConfig', 'Site', 'NameValuePair', 'ConnStringInfo', mod='models')
 
@@ -667,7 +666,7 @@ def _create_api_app(cli_ctx, name, resource_group_name, location, appconfig, app
 
 
 def _create_function_app(cli_ctx, name, resource_group_name, location, wj_storage, th_storage, appconfig=None, app_insights=None, tags=None):
-    from azext_tc._client_factory import web_client_factory
+    from ._client_factory import web_client_factory
     from azure.cli.core.util import send_raw_request
     SiteConfig, Site, NameValuePair, ConnStringInfo = get_sdk(
         cli_ctx, ResourceType.MGMT_APPSERVICE, 'SiteConfig', 'Site', 'NameValuePair', 'ConnStringInfo', mod='models')
@@ -772,7 +771,7 @@ def _create_resource_manager_sp(cmd):
 
 def _deploy_app(cli_ctx, resource_group_name, name, location, repo_url, slot=None, app_instance=None):
     from azure.mgmt.web.models import SiteSourceControl
-    from azext_tc._client_factory import web_client_factory
+    from ._client_factory import web_client_factory
 
     web_client = web_client_factory(cli_ctx).web_apps
 
@@ -796,7 +795,7 @@ def _deploy_app(cli_ctx, resource_group_name, name, location, repo_url, slot=Non
 
 def _zip_deploy_app(cli_ctx, resource_group_name, name, repo_url, zip_name, version=None, slot=None, app_instance=None, timeout=None):
     from azure.cli.core.util import should_disable_connection_verify
-    from azext_tc._client_factory import web_client_factory
+    from ._client_factory import web_client_factory
 
     web_client = web_client_factory(cli_ctx).web_apps
 
@@ -908,7 +907,7 @@ def _configure_default_logging(cli_ctx, resource_group_name, name, slot=None, ap
                                      failed_requests_tracing=None,
                                      detailed_error_messages=None)
 
-    from azext_tc._client_factory import web_client_factory
+    from ._client_factory import web_client_factory
     web_client = web_client_factory(cli_ctx).web_apps
 
     return web_client.update_diagnostic_logs_config(resource_group_name, name, site_log_config)
@@ -925,7 +924,7 @@ def _get_scm_url(cli_ctx, resource_group_name, name, slot=None, app_instance=Non
 def _get_webapp(cli_ctx, resource_group_name, name, slot=None, app_instance=None):
     webapp = app_instance
     if not app_instance:
-        from azext_tc._client_factory import web_client_factory
+        from ._client_factory import web_client_factory
         web_client = web_client_factory(cli_ctx).web_apps
         webapp = web_client.get(resource_group_name, name)
     if not webapp:

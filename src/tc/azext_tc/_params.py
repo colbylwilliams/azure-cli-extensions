@@ -12,16 +12,15 @@ from azure.cli.core.commands.parameters import (
     get_location_type,
     resource_group_name_type)
 
-from azext_tc._validators import (
+from ._validators import (
     project_name_validator, project_name_or_id_validator, user_name_validator, user_name_or_id_validator,
     tracking_id_validator, project_type_id_validator, project_type_id_validator_name, provider_id_validator,
-    subscriptions_list_validator, provider_event_list_validator, provider_depends_on_validator, url_validator,
-    base_url_validator, auth_code_validator)
+    subscriptions_list_validator, provider_event_list_validator, url_validator, base_url_validator, auth_code_validator)
 
-from azext_tc._completers import (
+from ._completers import (
     get_project_completion_list)
 
-from azext_tc._actions import CreateProviderReference
+from ._actions import CreateProviderReference
 
 
 def load_arguments(self, _):

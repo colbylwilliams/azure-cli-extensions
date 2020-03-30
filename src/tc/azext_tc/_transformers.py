@@ -7,7 +7,7 @@ from collections import OrderedDict
 # from knack.util import CLIError
 # from msrest.pipeline import ClientRawResponse
 from knack.log import get_logger
-from azext_tc.vendored_sdks.teamcloud.models import (ErrorResult, StatusResult)
+from .vendored_sdks.teamcloud.models import (ErrorResult, StatusResult)
 
 logger = get_logger(__name__)
 

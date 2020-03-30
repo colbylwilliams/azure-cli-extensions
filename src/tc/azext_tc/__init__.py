@@ -5,14 +5,14 @@
 
 from azure.cli.core import AzCommandsLoader
 
-from azext_tc._help import helps  # pylint: disable=unused-import
+from ._help import helps  # pylint: disable=unused-import
 
 
 class TcCommandsLoader(AzCommandsLoader):
 
     def __init__(self, cli_ctx=None):
         from azure.cli.core.commands import CliCommandType
-        from azext_tc._client_factory import teamcloud_client_factory
+        from ._client_factory import teamcloud_client_factory
         tc_custom = CliCommandType(
             operations_tmpl='azext_tc.custom#{}',
             client_factory=teamcloud_client_factory)
@@ -20,12 +20,12 @@ class TcCommandsLoader(AzCommandsLoader):
             cli_ctx=cli_ctx, custom_command_type=tc_custom)
 
     def load_command_table(self, args):
-        from azext_tc.commands import load_command_table
+        from .commands import load_command_table
         load_command_table(self, args)
         return self.command_table
 
     def load_arguments(self, command):
-        from azext_tc._params import load_arguments
+        from ._params import load_arguments
         load_arguments(self, command)
 
 

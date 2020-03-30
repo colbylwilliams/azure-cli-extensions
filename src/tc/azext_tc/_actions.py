@@ -9,7 +9,7 @@ from re import match
 from knack.log import get_logger
 from knack.util import CLIError
 
-from azext_tc.vendored_sdks.teamcloud.models import ProviderReference
+from .vendored_sdks.teamcloud.models import ProviderReference
 
 logger = get_logger(__name__)
 
