@@ -4,6 +4,7 @@
 # --------------------------------------------------------------------------------------------
 
 # pylint: disable=line-too-long, too-many-statements
+import platform
 
 from knack.arguments import CLIArgumentType
 from azure.cli.core.commands.parameters import (
@@ -15,7 +16,8 @@ from azure.cli.core.commands.parameters import (
 from ._validators import (
     project_name_validator, project_name_or_id_validator, user_name_validator, user_name_or_id_validator,
     tracking_id_validator, project_type_id_validator, project_type_id_validator_name, provider_id_validator,
-    subscriptions_list_validator, provider_event_list_validator, url_validator, base_url_validator, auth_code_validator)
+    subscriptions_list_validator, provider_event_list_validator, url_validator, base_url_validator,
+    source_version_validator, auth_code_validator, properties_validator)
 
 from ._completers import (
     get_project_completion_list)
@@ -24,6 +26,8 @@ from ._actions import CreateProviderReference
 
 
 def load_arguments(self, _):
+
+    quotes = '""' if platform.system() == 'Windows' else "''"
 
     tc_url_type = CLIArgumentType(
         options_list=['--base-url', '-u'],
@@ -47,6 +51,11 @@ def load_arguments(self, _):
         validator=project_name_or_id_validator,
         completer=get_project_completion_list)
 
+    properties_type = CLIArgumentType(
+        validator=properties_validator,
+        help="Space-separated properties: key[=value] [key[=value] ...]. Use {} to clear existing properties.".format(quotes),
+        nargs='*')
+
     # Global
 
     with self.argument_context('tc') as c:
@@ -60,6 +69,8 @@ def load_arguments(self, _):
         with self.argument_context(scope, arg_group='TeamCloud Global') as c:
             c.ignore('_subscription')
             c.argument('base_url', tc_url_type)
+
+    # Tags
 
     for scope in ['tc tag create', 'tc project tag create']:
         with self.argument_context(scope) as c:
@@ -79,7 +90,8 @@ def load_arguments(self, _):
 
     with self.argument_context('tc upgrade') as c:
         c.argument('version', options_list=['--version', '-v'],
-                   type=str, help='TeamCloud release version.')
+                   type=str, help='TeamCloud release version.',
+                   validator=source_version_validator)
         c.argument('resource_group_name', arg_type=resource_group_name_type, default='TeamCloud')
 
     with self.argument_context('tc status') as c:
@@ -156,8 +168,7 @@ def load_arguments(self, _):
         c.argument('provider', nargs='+', action=CreateProviderReference,
                    help='Project type provider: provider_id [key=value ...]. Use depends_on key to define dependencies. Use multiple --provider arguemnts to specify multiple providers.')
         c.argument('tags', tags_type)
-        c.argument('properties', tags_type,
-                   help="Space-separated properties: key[=value][key[=value] ...]. Use '' to clear existing properties.")
+        c.argument('properties', properties_type)
         c.ignore('providers')
 
     for scope in ['tc project-type show', 'tc project-type delete']:
@@ -182,8 +193,7 @@ def load_arguments(self, _):
             c.argument('events', nargs='+',
                        help='Space-seperated provider ids.',
                        validator=provider_event_list_validator)
-            c.argument('properties', tags_type,
-                       help="Space-separated properties: key[=value][key[=value] ...]. Use '' to clear existing properties.")
+            c.argument('properties', properties_type)
 
     for scope in ['tc provider show', 'tc provider delete']:
         with self.argument_context(scope) as c:
@@ -195,7 +205,8 @@ def load_arguments(self, _):
         c.argument('provider', get_enum_type(['azure.appinsights', 'azure.devops', 'azure.devtestlabs']),
                    options_list=['--name', '-n'], help='Provider id.')
         c.argument('version', options_list=['--version', '-v'],
-                   type=str, help='Provider release version.')
+                   type=str, help='Provider release version.',
+                   validator=source_version_validator)
         c.argument('resource_group_name',
                    arg_type=resource_group_name_type, default='TeamCloud-Providers',
                    help='Name of resource group.')

@@ -19,13 +19,12 @@ logger = get_logger(__name__)
 
 STATUS_POLLING_SLEEP_INTERVAL = 2
 
-# pylint: disable=unused-argument, protected-access, line-too-long, too-many-locals
+# pylint: disable=unused-argument, protected-access, line-too-long, too-many-locals, import-outside-toplevel
 
 
 # TeamCloud
 
 def teamcloud_create(cmd, client, name, location, resource_group_name=None, principal_name=None, principal_password=None, tags=None, skip_deploy=False):  # pylint: disable=too-many-statements
-    # from azure.cli.core.util import random_string
     from azure.cli.core._profile import Profile
 
     cli_ctx = cmd.cli_ctx
@@ -33,10 +32,11 @@ def teamcloud_create(cmd, client, name, location, resource_group_name=None, prin
     location = location.lower()
     rg_name = resource_group_name or 'TeamCloud'
 
-    logger.warning('Getting resource group...')
+    logger.warning("Getting resource group '%s'...", rg_name)
     rg, subscription_id = _get_resource_group_by_name(cli_ctx, rg_name)
     if rg is None:
-        logger.warning('Creating resource group...')
+        logger.warning("Resource group '%s' not found.", rg_name)
+        logger.warning("Creating resource group '%s'...", rg_name)
         _create_resource_group_name(cli_ctx, rg_name, location)
 
     name_short = ''
@@ -117,14 +117,14 @@ def teamcloud_create(cmd, client, name, location, resource_group_name=None, prin
 
 
 def teamcloud_upgrade(cmd, client, base_url, resource_group_name=None, version=None):
+    from re import match
     rg_name = resource_group_name or 'TeamCloud'
 
-    logger.warning('Getting resource group...')
+    logger.warning("Getting resource group '%s'...", rg_name)
     rg, _ = _get_resource_group_by_name(cmd.cli_ctx, rg_name)
     if rg is None:
-        raise CLIError("Resource Group 'TeamCLoud' must exist in current subscription.")
-
-    from re import match
+        logger.warning("Resource group '%s' not found.", rg_name)
+        raise CLIError("Resource group '{}' must exist in current subscription.".format(rg_name))
 
     name = ''
     m = match(r'^https?://(?P<name>[a-zA-Z0-9-]+)\.azurewebsites\.net[/a-zA-Z0-9.\:]*$', base_url)
@@ -136,15 +136,14 @@ def teamcloud_upgrade(cmd, client, base_url, resource_group_name=None, version=N
     if name is None or '':
         raise CLIError("Unable to get app name from base url.")
 
-    # logger.warning(name)
-
     logger.warning('Deploying orchestrator source code (version: %s)...', version)
     _zip_deploy_app(cmd.cli_ctx, rg_name, name + '-orchestrator', 'https://github.com/microsoft/TeamCloud', 'TeamCloud.Orchestrator', version=version)
 
     logger.warning('Deploying api app source code (version: %s)...', version)
     _zip_deploy_app(cmd.cli_ctx, rg_name, name, 'https://github.com/microsoft/TeamCloud', 'TeamCloud.API', version=version)
 
-    return name
+    version_string = version or 'the latest version'
+    return "TeamCloud instance '{}' was successfully upgraded to {}.".format(name, version_string)
 
 
 def status_get(cmd, client, base_url, tracking_id, project=None):
@@ -360,35 +359,9 @@ def provider_get(cmd, client, base_url, provider):
 
 
 def provider_deploy(cmd, client, base_url, provider, version=None, resource_group_name=None, teamcloud_resource_group_name=None, events=None, properties=None):
-    client._client.config.base_url = base_url
     from azure.cli.core.util import random_string
+    client._client.config.base_url = base_url
     cli_ctx = cmd.cli_ctx
-
-    # TODO: Get TeamCloud location, tags ect.
-    tags = None
-
-    tc_rg_name = teamcloud_resource_group_name or 'TeamCloud'
-    rg_name = resource_group_name or 'TeamCloud-Providers'
-
-    logger.warning('Getting TeamCloud resource group...')
-    teamcloud_rg, _ = _get_resource_group_by_name(cli_ctx, tc_rg_name)
-    if teamcloud_rg is None:
-        raise CLIError("Resource Group '{}' must exist in current subscription.".format(tc_rg_name))
-
-    logger.warning('Getting TeamCloud-Providers resource group...')
-    rg, _ = _get_resource_group_by_name(cli_ctx, rg_name)
-    if rg is None:
-        logger.warning('Creating TeamCloud-Providers group...')
-        _create_resource_group_name(cli_ctx, rg_name, teamcloud_rg.location)
-
-    name = random_string(length=14, force_lower=True)
-    location = rg.location.lower()
-
-    logger.warning('Creating task hub storage account...')
-    th_storage = _create_storage_account(cli_ctx, name + 'thtorage', rg_name, location, tags)
-
-    logger.warning('Creating web jobs storage account...')
-    wj_storage = _create_storage_account(cli_ctx, name + 'wjstorage', rg_name, location, tags)
 
     zip_name = None
     if provider == 'azure.appinsights':
@@ -399,9 +372,39 @@ def provider_deploy(cmd, client, base_url, provider, version=None, resource_grou
         zip_name = 'TeamCloud.Providers.Azure.DevTestLabs'
 
     if zip_name is None:
-        raise CLIError("--providers is invalid.  Must be one of 'azure.appinsights', 'azure.devops', 'azure.devtestlabs'")
+        raise CLIError("--provider is invalid.  Must be one of 'azure.appinsights', 'azure.devops', 'azure.devtestlabs'")
 
-    functionapp, host_key = _create_function_app(cli_ctx, name, rg_name, location, wj_storage, th_storage, tags=tags)
+    tc_rg_name = teamcloud_resource_group_name or 'TeamCloud'
+    rg_name = resource_group_name or 'TeamCloud-Providers'
+
+    logger.warning("Getting resource group '%s'...", tc_rg_name)
+    teamcloud_rg, _ = _get_resource_group_by_name(cli_ctx, tc_rg_name)
+    if teamcloud_rg is None:
+        logger.warning("Resource group '%s' not found.", tc_rg_name)
+        raise CLIError("Resource group '{}' must exist in current subscription.".format(tc_rg_name))
+
+    logger.warning("Getting resource group '%s'...", rg_name)
+    rg, _ = _get_resource_group_by_name(cli_ctx, rg_name)
+    if rg is None:
+        logger.warning("Resource group '%s' not found.", rg_name)
+        logger.warning("Creating resource group '%s'...", rg_name)
+        _create_resource_group_name(cli_ctx, rg_name, teamcloud_rg.location)
+
+    name = random_string(length=14, force_lower=True)
+
+    try:  # if we created the rg this will fail
+        location = rg.location.lower()
+    except AttributeError:  # use teamcloud rg location
+        location = teamcloud_rg.location.lower()
+
+    logger.warning('Creating task hub storage account...')
+    th_storage = _create_storage_account(cli_ctx, name + 'thtorage', rg_name, location)
+
+    logger.warning('Creating web jobs storage account...')
+    wj_storage = _create_storage_account(cli_ctx, name + 'wjstorage', rg_name, location)
+
+    logger.warning('Creating provider function app...')
+    functionapp, host_key = _create_function_app(cli_ctx, name, rg_name, location, wj_storage, th_storage)
 
     url = 'https://{}'.format(functionapp.default_host_name)
 
@@ -518,7 +521,7 @@ def _create_resource_group_name(cli_ctx, resource_group_name, location, tags=Non
     resource_client.create_or_update(resource_group_name, parameters)
 
 
-def _create_storage_account(cli_ctx, name, resource_group_name, location, tags):
+def _create_storage_account(cli_ctx, name, resource_group_name, location, tags=None):
     from ._client_factory import storage_client_factory
     from azure.mgmt.storage.models import Sku, SkuName, StorageAccountCreateParameters
     params = StorageAccountCreateParameters(sku=Sku(name=SkuName.standard_ragrs),
@@ -794,6 +797,9 @@ def _deploy_app(cli_ctx, resource_group_name, name, location, repo_url, slot=Non
 
 
 def _zip_deploy_app(cli_ctx, resource_group_name, name, repo_url, zip_name, version=None, slot=None, app_instance=None, timeout=None):
+    import requests
+    import urllib3
+
     from azure.cli.core.util import should_disable_connection_verify
     from ._client_factory import web_client_factory
 
@@ -811,20 +817,11 @@ def _zip_deploy_app(cli_ctx, resource_group_name, name, repo_url, zip_name, vers
     zipdeploy_url = scm_url + '/api/zipdeploy?isAsync=true'
     deployment_status_url = scm_url + '/api/deployments/latest'
 
-    import requests
-    import urllib3
-
     authorization = urllib3.util.make_headers(basic_auth='{}:{}'.format(creds.publishing_user_name, creds.publishing_password))
 
     zip_package_uri = '{}/releases/latest/download/{}.zip'.format(repo_url, zip_name)
 
     if version:
-        version = version.lower()
-        from re import match
-        m = match(r'^[vV]?[0-9]+\.[0-9]+\.[0-9]+$', version)
-        if m is None:
-            raise CLIError('--version should be in format v0.0.0 do not include -pre suffix')
-
         zip_package_uri = '{}/releases/download/{}/{}.zip'.format(repo_url, version, zip_name)
 
     logger.warning("Starting zip deployment. This will take several minutes to complete...")

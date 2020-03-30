@@ -123,10 +123,6 @@ def transform_provider_table_output(result):
             ('Provider ID', item['id']),
             ('Url', item['url']),
             ('Code', '************'),
-            ('Optional', item['optional']),
-            ('Dependencies (Create)', '\n'.join(
-                item['dependencies']['create'])),
-            ('Dependencies (Init)', '\n'.join(item['dependencies']['init'])),
             ('Events', '\n'.join(item['events'])),
             ('Properties', str(item['properties'])),
             # ('Tags', str(item['tags'])),

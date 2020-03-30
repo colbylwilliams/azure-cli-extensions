@@ -375,7 +375,8 @@ examples:
         --name azure.devtestlabs \\
         --events azure.devtestlabs azure.appinsights
   - name: Deploy a provider to a specific pre-release.
-    text: az tc provider deploy \\
+    text: |
+      az tc provider deploy \\
         --name azure.devtestlabs \\
         --events azure.devtestlabs azure.appinsights
         --version v0.1.1

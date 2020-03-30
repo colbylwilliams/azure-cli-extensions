@@ -100,21 +100,21 @@ def project_type_id_validator(cmd, namespace):
     if namespace.project_type:
         if not _is_valid_project_type_id(namespace.project_type):
             raise CLIError(
-                '--project-type should start with a lowercase and contain only lowercase, numbers, and periods [.] with length [4,254]')
+                '--project-type should start with a lowercase and contain only lowercase, numbers, and periods [.] with length [5,254]')
 
 
 def project_type_id_validator_name(cmd, namespace):
     if namespace.project_type:
         if not _is_valid_project_type_id(namespace.project_type):
             raise CLIError(
-                '--name should start with a lowercase and contain only lowercase, numbers, and periods [.] with length [4,254]')
+                '--name should start with a lowercase and contain only lowercase, numbers, and periods [.] with length [5,254]')
 
 
 def provider_id_validator(cmd, namespace):
     if namespace.provider:
         if not _is_valid_provider_id(namespace.provider):
             raise CLIError(
-                '--name should start with a lowercase and contain only lowercase, numbers, and periods [.] with length [4,254]')
+                '--name should start with a lowercase and contain only lowercase, numbers, and periods [.] with length [5,254]')
 
 
 def subscriptions_list_validator(cmd, namespace):
@@ -128,14 +128,14 @@ def provider_event_list_validator(cmd, namespace):
     if namespace.events:
         if not all(_is_valid_provider_id(x) for x in namespace.events):
             raise CLIError(
-                '--events should be a space-separated list of valid provider ids, provider ids should start with a lowercase and contain only lowercase, numbers, and periods [.] with length [4,254]')
+                '--events should be a space-separated list of valid provider ids, provider ids should start with a lowercase and contain only lowercase, numbers, and periods [.] with length [5,254]')
 
 
 def provider_depends_on_validator(cmd, namespace):
     if namespace.depends_on:
         if not all(_is_valid_provider_id(x) for x in namespace.depends_on):
             raise CLIError(
-                '--depends-on should be a space-separated list of valid provider ids, provider ids should start with a lowercase and contain only lowercase, numbers, and periods [.] with length [4,254]')
+                '--depends-on should be a space-separated list of valid provider ids, provider ids should start with a lowercase and contain only lowercase, numbers, and periods [.] with length [5,254]')
 
 
 def tc_resource_name_validator(cmd, namespace):
@@ -173,16 +173,42 @@ def auth_code_validator(cmd, namespace):
                 '--auth-code should contain only base-64 digits [A-Za-z0-9/] (excluding the plus sign (+)), ending in = or ==')
 
 
+def source_version_validator(cmd, namespace):
+    if namespace.version:
+        namespace.version = namespace.version.lower()
+        if namespace.version[:1].isdigit():
+            namespace.version = 'v' + namespace.version
+        if not _is_valid_version(namespace.version):
+            raise CLIError(
+                '--version should be in format v0.0.0 do not include -pre suffix')
+
+
+def properties_validator(cmd, namespace):
+    if isinstance(namespace.properties, list):
+        properties_dict = {}
+        for item in namespace.properties:
+            properties_dict.update(property_validator(item))
+        namespace.properties = properties_dict
+
+
+def property_validator(string):
+    result = {}
+    if string:
+        comps = string.split('=', 1)
+        result = {comps[0]: comps[1]} if len(comps) > 1 else {string: ''}
+    return result
+
+
 def _is_valid_project_name(name):
     return name is not None and 4 < len(name) < 31
 
 
 def _is_valid_project_type_id(project_type_id):
-    return 4 <= len(project_type_id) <= 255 and match(r'^(?:[a-z][a-z0-9]+(?:\.[a-z0-9]+)+)$', project_type_id) is not None
+    return 5 <= len(project_type_id) <= 255 and match(r'^(?:[a-z][a-z0-9]+(?:\.[a-z0-9]+)+)$', project_type_id) is not None
 
 
 def _is_valid_provider_id(provider_id):
-    return 4 <= len(provider_id) <= 255 and match(r'^(?:[a-z][a-z0-9]+(?:\.[a-z0-9]+)+)$', provider_id) is not None
+    return 5 <= len(provider_id) <= 255 and match(r'^(?:[a-z][a-z0-9]+(?:\.[a-z0-9]+)+)$', provider_id) is not None
 
 
 def _is_valid_resource_id(resource_id):
@@ -215,3 +241,7 @@ def _is_valid_uuid(uuid_to_test, version=4):
         return False
 
     return str(uuid_obj) == uuid_to_test
+
+
+def _is_valid_version(version):
+    return match(r'^v[0-9]+\.[0-9]+\.[0-9]+$', version) is not None
