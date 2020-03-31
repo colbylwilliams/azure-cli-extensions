@@ -91,6 +91,7 @@ def teamcloud_create(cmd, client, name, location, resource_group_name='TeamCloud
     api_app = _create_api_app(cli_ctx, name, resource_group_name, location, appconfig, appinsights, tags)
 
     logger.warning('Successfully deployed Azure resources for TeamCloud')
+    base_url = 'https://{}'.format(api_app.default_host_name)
 
     if skip_deploy:
         logger.warning('IMPORTANT: --skip-deploy prevented source code for the TeamCloud instance deployment. To deploy the applicaitons use `az tc upgrade`.')
@@ -104,13 +105,35 @@ def teamcloud_create(cmd, client, name, location, resource_group_name='TeamCloud
         _zip_deploy_app(cli_ctx, resource_group_name, name, 'https://github.com/microsoft/TeamCloud', 'TeamCloud.API', version=version, app_instance=api_app)
 
         logger.warning('Successfully created TeamCloud instance.')
-        base_url = 'https://{}'.format(api_app.default_host_name)
-
         logger.warning('Creating admin user...')
         me = profile.get_current_account_user()
         _ = teamcloud_user_create(cmd, client, base_url, me, user_role='Admin')
 
-    return 'TeamCloud instance successfully created at: {0}. Use `az configure --defaults tc-base-url={0}` to configure this as your default TeamCloud instance'.format(base_url)
+    logger.warning(
+        'TeamCloud instance successfully created at: %s. Use `az configure --defaults tc-base-url=%s` to configure this as your default TeamCloud instance', base_url, base_url)
+
+    result = {
+        'deployed': not skip_deploy,
+        'version': version or 'latest',
+        'name': name,
+        'base_url': base_url,
+        'location': location,
+        'api': {
+            'name': name,
+            'url': 'https://{}'.format(api_app.default_host_name)
+        },
+        'orchestrator': {
+            'name': name + '-orchestrator',
+            'url': 'https://{}'.format(orchestrator.default_host_name)
+        },
+        'service_principal': {
+            'appId': resource_manager_sp['appId'],
+            # 'password': resource_manager_sp['password'],
+            'tenant': resource_manager_sp['tenant']
+        }
+    }
+
+    return result
 
 
 def teamcloud_upgrade(cmd, client, base_url, resource_group_name='TeamCloud', version=None):
@@ -765,11 +788,11 @@ def _try_create_application_insights(cli_ctx, name, resource_group_name, locatio
 
     app_insights_client = get_mgmt_service_client(cli_ctx, ApplicationInsightsManagementClient)
     properties = {
-        "name": name,
-        "location": location,
-        "kind": "web",
-        "properties": {
-            "Application_Type": "web"
+        'name': name,
+        'location': location,
+        'kind': 'web',
+        'properties': {
+            'Application_Type': 'web'
         }
     }
 

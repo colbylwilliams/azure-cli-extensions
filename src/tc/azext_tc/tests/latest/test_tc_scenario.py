@@ -30,26 +30,38 @@ TEST_DIR = os.path.abspath(os.path.join(os.path.abspath(__file__), '..'))
 
 class TeamCloudScenarioTest(ScenarioTest):
 
-    @ResourceGroupPreparer(name_prefix='CLI_TESTS_', parameter_name_for_location='location')
-    def test_tc(self, resource_group, location):
-        self.kwargs.update({
-            'name': 'test1',
-            'loc': location
-        })
+    @ResourceGroupPreparer(parameter_name='tc_group', parameter_name_for_location='location', location='eastus')
+    @ResourceGroupPreparer(parameter_name='provider_group', location='eastus')
+    def test_tc(self, tc_group, provider_group, location):
 
-        self.cmd('tc create -g {rg} -n {name} --tags foo=doo', checks=[
-            self.check('tags.foo', 'doo'),
-            self.check('name', '{name}')
-        ])
-        self.cmd('tc update -g {rg} -n {name} --tags foo=boo', checks=[
-            self.check('tags.foo', 'boo')
-        ])
-        count = len(self.cmd('tc list').get_output_in_json())
-        self.cmd('tc show - {rg} -n {name}', checks=[
-            self.check('name', '{name}'),
-            self.check('resourceGroup', '{rg}'),
-            self.check('tags.foo', 'boo')
-        ])
-        self.cmd('tc delete -g {rg} -n {name}')
-        final_count = len(self.cmd('tc list').get_output_in_json())
-        self.assertTrue(final_count, count - 1)
+        pre_version = 'v0.1.274'
+        provider_pre_version = 'v0.1.9'
+
+        subscription = self.current_subscription()
+        tc_name = self.create_random_name(prefix='cli', length=11)
+
+        cmd = 'tc create -n {name} -g {tc_group} -l {location} -v {pre_version}'.format(**locals())
+        result = self.cmd(cmd).get_output_in_json()
+        self.assertEqual(result['location'], location)
+        self.assertEqual(result['version'], pre_version)
+        self.assertIsNotNone(result['base_url'])
+
+        base_url = result['base_url']
+
+        provider = 'azure.appinsights'
+        cmd = 'tc provider deploy -u {base_url} -n {provider} -g {provider_group} -v {provider_pre_version}'.format(**locals())
+        result = self.cmd(cmd).get_output_in_json()
+        self.assertEqual(result['id'], provider)
+        self.assertIsNotNone(result['url'])
+
+        cmd = 'tc provider show -u {base_url} -n {provider}'.format(**locals())
+        result = self.cmd(cmd).get_output_in_json()
+        self.assertEqual(result['id'], provider)
+        self.assertIsNotNone(result['url'])
+
+        cmd = 'tc provider list -u {base_url}'.format(**locals())
+        result = self.cmd(cmd).get_output_in_json()
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]['id'], provider)
+        self.assertIsNotNone(result[0]['url'])
+
