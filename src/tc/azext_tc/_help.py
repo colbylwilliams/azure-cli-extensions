@@ -370,15 +370,17 @@ type: command
 short-summary: Deploy a provider.
 examples:
   - name: Deploy a provider.
-    text: |
-      az tc provider deploy \\
-        --name azure.devtestlabs \\
-        --events azure.devtestlabs azure.appinsights
+    text: az tc provider deploy --name azure.devtestlabs
   - name: Deploy a provider to a specific pre-release.
-    text: |
-      az tc provider deploy \\
-        --name azure.devtestlabs \\
-        --events azure.devtestlabs azure.appinsights
-        --version v0.1.1
+    text: az tc provider deploy --name azure.devtestlabs --version v0.1.1
+"""
 
+helps['tc provider upgrade'] = """
+type: command
+short-summary: Upgrade version of a provider.
+examples:
+  - name: Upgrade provider to the latest version.
+    text: az tc provider upgrade --name azure.devtestlabs
+  - name: Upgrade provider to a specific pre-release.
+    text: az tc provider upgrade --name azure.devtestlabs --version v0.1.1
 """

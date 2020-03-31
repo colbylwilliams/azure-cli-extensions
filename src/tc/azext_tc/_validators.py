@@ -16,7 +16,7 @@ from .vendored_sdks.teamcloud.models import ErrorResult
 
 logger = get_logger(__name__)
 
-# pylint: disable=unused-argument, protected-access
+# pylint: disable=unused-argument, protected-access, import-outside-toplevel
 
 
 def tc_create_validator(cmd, namespace):

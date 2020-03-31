@@ -24,20 +24,19 @@ STATUS_POLLING_SLEEP_INTERVAL = 2
 
 # TeamCloud
 
-def teamcloud_create(cmd, client, name, location, resource_group_name=None, principal_name=None, principal_password=None, tags=None, skip_deploy=False):  # pylint: disable=too-many-statements
+def teamcloud_create(cmd, client, name, location, resource_group_name='TeamCloud', principal_name=None, principal_password=None, tags=None, version=None, skip_deploy=False):  # pylint: disable=too-many-statements
     from azure.cli.core._profile import Profile
 
     cli_ctx = cmd.cli_ctx
 
     location = location.lower()
-    rg_name = resource_group_name or 'TeamCloud'
 
-    logger.warning("Getting resource group '%s'...", rg_name)
-    rg, subscription_id = _get_resource_group_by_name(cli_ctx, rg_name)
+    logger.warning("Getting resource group '%s'...", resource_group_name)
+    rg, subscription_id = _get_resource_group_by_name(cli_ctx, resource_group_name)
     if rg is None:
-        logger.warning("Resource group '%s' not found.", rg_name)
-        logger.warning("Creating resource group '%s'...", rg_name)
-        _create_resource_group_name(cli_ctx, rg_name, location)
+        logger.warning("Resource group '%s' not found.", resource_group_name)
+        logger.warning("Creating resource group '%s'...", resource_group_name)
+        _create_resource_group_name(cli_ctx, resource_group_name, location)
 
     name_short = ''
     for n in name.lower():
@@ -48,19 +47,19 @@ def teamcloud_create(cmd, client, name, location, resource_group_name=None, prin
         name_short = name_short[:14]
 
     logger.warning('Creating app insights...')
-    appinsights = _try_create_application_insights(cli_ctx, name_short + 'appinsights', rg_name, location)
+    appinsights = _try_create_application_insights(cli_ctx, name_short + 'appinsights', resource_group_name, location)
 
     logger.warning('Creating deployment storage account...')
-    dep_storage = _create_storage_account(cli_ctx, name_short + 'depstorage', rg_name, location, tags)
+    dep_storage = _create_storage_account(cli_ctx, name_short + 'depstorage', resource_group_name, location, tags)
 
     logger.warning('Creating task hub storage account...')
-    th_storage = _create_storage_account(cli_ctx, name_short + 'thtorage', rg_name, location, tags)
+    th_storage = _create_storage_account(cli_ctx, name_short + 'thtorage', resource_group_name, location, tags)
 
     logger.warning('Creating web jobs storage account...')
-    wj_storage = _create_storage_account(cli_ctx, name_short + 'wjstorage', rg_name, location, tags)
+    wj_storage = _create_storage_account(cli_ctx, name_short + 'wjstorage', resource_group_name, location, tags)
 
     logger.warning('Creating cosmos db account. This will take several minutes to complete...')
-    cosmosdb = _create_cosmosdb_account(cli_ctx, name_short + 'database', rg_name, location, tags)
+    cosmosdb = _create_cosmosdb_account(cli_ctx, name_short + 'database', resource_group_name, location, tags)
 
     profile = Profile(cli_ctx=cli_ctx)
 
@@ -76,20 +75,20 @@ def teamcloud_create(cmd, client, name, location, resource_group_name=None, prin
         }
 
     logger.warning('Creating app configuration service...')
-    appconfig = _create_appconfig(cli_ctx, name + '-config', rg_name, location, tags)
+    appconfig = _create_appconfig(cli_ctx, name + '-config', resource_group_name, location, tags)
 
     logger.warning('Adding resource info to app configuration service...')
     _set_appconfig_keys(cli_ctx, subscription_id, resource_manager_sp, appconfig, cosmosdb, dep_storage)
 
     logger.warning('Creating orchestrator function app...')
-    orchestrator, orchestrator_host_key = _create_function_app(cli_ctx, name + '-orchestrator', rg_name, location,
+    orchestrator, orchestrator_host_key = _create_function_app(cli_ctx, name + '-orchestrator', resource_group_name, location,
                                                                wj_storage, th_storage, appconfig, appinsights, tags)
 
     logger.warning('Adding orchestrator info to app configuration service...')
     _set_appconfig_orchestrator_keys(cli_ctx, subscription_id, appconfig, orchestrator, orchestrator_host_key)
 
     logger.warning('Creating api app service...')
-    api_app = _create_api_app(cli_ctx, name, rg_name, location, appconfig, appinsights, tags)
+    api_app = _create_api_app(cli_ctx, name, resource_group_name, location, appconfig, appinsights, tags)
 
     logger.warning('Successfully deployed Azure resources for TeamCloud')
 
@@ -98,13 +97,11 @@ def teamcloud_create(cmd, client, name, location, resource_group_name=None, prin
 
     else:
         logger.warning('Deploying orchestrator source code...')
-        # _zip_deploy_app(cli_ctx, rg_name, name + '-orchestrator', 'https://github.com/microsoft/TeamCloud', 'TeamCloud.Orchestrator', version=None, app_instance=orchestrator)
-        _zip_deploy_app(cli_ctx, rg_name, name + '-orchestrator', 'https://github.com/microsoft/TeamCloud',
-                        'TeamCloud.Orchestrator', version='v0.1.1-alpha.1', app_instance=orchestrator)
+        _zip_deploy_app(cli_ctx, resource_group_name, name + '-orchestrator', 'https://github.com/microsoft/TeamCloud',
+                        'TeamCloud.Orchestrator', version=version, app_instance=orchestrator)
 
         logger.warning('Deploying api app source code...')
-        # _zip_deploy_app(cli_ctx, rg_name, name, 'https://github.com/microsoft/TeamCloud', 'TeamCloud.API', version=None, app_instance=api_app)
-        _zip_deploy_app(cli_ctx, rg_name, name, 'https://github.com/microsoft/TeamCloud', 'TeamCloud.API', version='v0.1.1-alpha.1', app_instance=api_app)
+        _zip_deploy_app(cli_ctx, resource_group_name, name, 'https://github.com/microsoft/TeamCloud', 'TeamCloud.API', version=version, app_instance=api_app)
 
         logger.warning('Successfully created TeamCloud instance.')
         base_url = 'https://{}'.format(api_app.default_host_name)
@@ -116,15 +113,14 @@ def teamcloud_create(cmd, client, name, location, resource_group_name=None, prin
     return 'TeamCloud instance successfully created at: {0}. Use `az configure --defaults tc-base-url={0}` to configure this as your default TeamCloud instance'.format(base_url)
 
 
-def teamcloud_upgrade(cmd, client, base_url, resource_group_name=None, version=None):
+def teamcloud_upgrade(cmd, client, base_url, resource_group_name='TeamCloud', version=None):
     from re import match
-    rg_name = resource_group_name or 'TeamCloud'
 
-    logger.warning("Getting resource group '%s'...", rg_name)
-    rg, _ = _get_resource_group_by_name(cmd.cli_ctx, rg_name)
+    logger.warning("Getting resource group '%s'...", resource_group_name)
+    rg, _ = _get_resource_group_by_name(cmd.cli_ctx, resource_group_name)
     if rg is None:
-        logger.warning("Resource group '%s' not found.", rg_name)
-        raise CLIError("Resource group '{}' must exist in current subscription.".format(rg_name))
+        logger.warning("Resource group '%s' not found.", resource_group_name)
+        raise CLIError("Resource group '{}' must exist in current subscription.".format(resource_group_name))
 
     name = ''
     m = match(r'^https?://(?P<name>[a-zA-Z0-9-]+)\.azurewebsites\.net[/a-zA-Z0-9.\:]*$', base_url)
@@ -137,10 +133,10 @@ def teamcloud_upgrade(cmd, client, base_url, resource_group_name=None, version=N
         raise CLIError("Unable to get app name from base url.")
 
     logger.warning('Deploying orchestrator source code (version: %s)...', version)
-    _zip_deploy_app(cmd.cli_ctx, rg_name, name + '-orchestrator', 'https://github.com/microsoft/TeamCloud', 'TeamCloud.Orchestrator', version=version)
+    _zip_deploy_app(cmd.cli_ctx, resource_group_name, name + '-orchestrator', 'https://github.com/microsoft/TeamCloud', 'TeamCloud.Orchestrator', version=version)
 
     logger.warning('Deploying api app source code (version: %s)...', version)
-    _zip_deploy_app(cmd.cli_ctx, rg_name, name, 'https://github.com/microsoft/TeamCloud', 'TeamCloud.API', version=version)
+    _zip_deploy_app(cmd.cli_ctx, resource_group_name, name, 'https://github.com/microsoft/TeamCloud', 'TeamCloud.API', version=version)
 
     version_string = version or 'the latest version'
     return "TeamCloud instance '{}' was successfully upgraded to {}.".format(name, version_string)
@@ -358,7 +354,7 @@ def provider_get(cmd, client, base_url, provider):
     return client.get_provider_by_id(provider)
 
 
-def provider_deploy(cmd, client, base_url, provider, version=None, resource_group_name=None, teamcloud_resource_group_name=None, events=None, properties=None):
+def provider_deploy(cmd, client, base_url, provider, resource_group_name='TeamCloud-Providers', location=None, teamcloud_resource_group_name='TeamCloud', events=None, properties=None, version=None, use_teamcloud_location=True):
     from azure.cli.core.util import random_string
     client._client.config.base_url = base_url
     cli_ctx = cmd.cli_ctx
@@ -374,44 +370,84 @@ def provider_deploy(cmd, client, base_url, provider, version=None, resource_grou
     if zip_name is None:
         raise CLIError("--provider is invalid.  Must be one of 'azure.appinsights', 'azure.devops', 'azure.devtestlabs'")
 
-    tc_rg_name = teamcloud_resource_group_name or 'TeamCloud'
-    rg_name = resource_group_name or 'TeamCloud-Providers'
+    if use_teamcloud_location:
+        # get location from teamcloud resource group
+        tc_rg, _ = _get_resource_group_by_name(cli_ctx, teamcloud_resource_group_name)
+        if tc_rg is None:
+            logger.warning("Resource group '%s' not found.", teamcloud_resource_group_name)
+            raise CLIError("Resource group '{}' must exist in current subscription or must provide a value for --location.".format(teamcloud_resource_group_name))
+        location = tc_rg.location.lower()
+    elif location is None:
+        raise CLIError("--location must have value if --use-teamcloud-location is false")
 
-    logger.warning("Getting resource group '%s'...", tc_rg_name)
-    teamcloud_rg, _ = _get_resource_group_by_name(cli_ctx, tc_rg_name)
-    if teamcloud_rg is None:
-        logger.warning("Resource group '%s' not found.", tc_rg_name)
-        raise CLIError("Resource group '{}' must exist in current subscription.".format(tc_rg_name))
-
-    logger.warning("Getting resource group '%s'...", rg_name)
-    rg, _ = _get_resource_group_by_name(cli_ctx, rg_name)
+    # look for existing resource group
+    logger.warning("Getting resource group '%s'...", resource_group_name)
+    rg, _ = _get_resource_group_by_name(cli_ctx, resource_group_name)
     if rg is None:
-        logger.warning("Resource group '%s' not found.", rg_name)
-        logger.warning("Creating resource group '%s'...", rg_name)
-        _create_resource_group_name(cli_ctx, rg_name, teamcloud_rg.location)
+        logger.warning("Resource group '%s' not found.", resource_group_name)
+        logger.warning("Creating resource group '%s'...", resource_group_name)
+        _create_resource_group_name(cli_ctx, resource_group_name, location)
 
     name = random_string(length=14, force_lower=True)
 
-    try:  # if we created the rg this will fail
-        location = rg.location.lower()
-    except AttributeError:  # use teamcloud rg location
-        location = teamcloud_rg.location.lower()
-
     logger.warning('Creating task hub storage account...')
-    th_storage = _create_storage_account(cli_ctx, name + 'thtorage', rg_name, location)
+    th_storage = _create_storage_account(cli_ctx, name + 'thtorage', resource_group_name, location)
 
     logger.warning('Creating web jobs storage account...')
-    wj_storage = _create_storage_account(cli_ctx, name + 'wjstorage', rg_name, location)
+    wj_storage = _create_storage_account(cli_ctx, name + 'wjstorage', resource_group_name, location)
 
     logger.warning('Creating provider function app...')
-    functionapp, host_key = _create_function_app(cli_ctx, name, rg_name, location, wj_storage, th_storage)
+    functionapp, host_key = _create_function_app(cli_ctx, name, resource_group_name, location, wj_storage, th_storage)
 
     url = 'https://{}'.format(functionapp.default_host_name)
 
-    logger.warning('Deploying provider source code...')
-    _zip_deploy_app(cli_ctx, rg_name, name, 'https://github.com/microsoft/TeamCloud-Providers', zip_name, version=version, app_instance=functionapp)
+    logger.warning('Deploying provider source code (version: %s)...', version)
+    _zip_deploy_app(cli_ctx, resource_group_name, name, 'https://github.com/microsoft/TeamCloud-Providers', zip_name, version=version, app_instance=functionapp)
 
     return provider_create(cmd, client, base_url, provider, url, host_key, events, properties)
+
+
+def provider_upgrade(cmd, client, base_url, provider, resource_group_name='TeamCloud-Providers', version=None):
+    from re import match
+    client._client.config.base_url = base_url
+    cli_ctx = cmd.cli_ctx
+
+    zip_name = None
+    if provider == 'azure.appinsights':
+        zip_name = 'TeamCloud.Providers.Azure.AppInsights'
+    if provider == 'azure.devops':
+        zip_name = 'TeamCloud.Providers.Azure.DevOps'
+    if provider == 'azure.devtestlabs':
+        zip_name = 'TeamCloud.Providers.Azure.DevTestLabs'
+
+    if zip_name is None:
+        raise CLIError("--provider is invalid.  Must be one of 'azure.appinsights', 'azure.devops', 'azure.devtestlabs'")
+
+    logger.warning("Getting resource group '%s'...", resource_group_name)
+    rg, _ = _get_resource_group_by_name(cli_ctx, resource_group_name)
+    if rg is None:
+        logger.warning("Resource group '%s' not found.", resource_group_name)
+        raise CLIError("Resource group '{}' must exist in current subscription.".format(resource_group_name))
+
+    provider_result = client.get_provider_by_id(provider)
+
+    url = provider_result.data.url
+
+    name = ''
+    m = match(r'^https?://(?P<name>[a-zA-Z0-9-]+)\.azurewebsites\.net[/a-zA-Z0-9.\:]*$', url)
+    try:
+        name = m.group('name') if m is not None else None
+    except IndexError:
+        pass
+
+    if name is None or '':
+        raise CLIError("Unable to function app name from provider url.")
+
+    logger.warning('Deploying provider source code (version: %s)...', version)
+    _zip_deploy_app(cli_ctx, resource_group_name, name, 'https://github.com/microsoft/TeamCloud-Providers', zip_name, version=version)
+
+    version_string = version or 'the latest version'
+    return "Provider '{}' was successfully upgraded to {}.".format(name, version_string)
 
 
 # Util

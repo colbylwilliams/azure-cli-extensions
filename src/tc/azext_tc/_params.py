@@ -11,6 +11,7 @@ from azure.cli.core.commands.parameters import (
     tags_type,
     get_enum_type,
     get_location_type,
+    get_three_state_flag,
     resource_group_name_type)
 
 from ._validators import (
@@ -58,11 +59,11 @@ def load_arguments(self, _):
 
     # Global
 
-    with self.argument_context('tc') as c:
-        c.argument('name', options_list=['--name', '-n'],
-                   help='Name of app.')
-        c.argument('location', get_location_type(self.cli_ctx))
-        c.argument('tags', tags_type)
+    # with self.argument_context('tc') as c:
+    #     c.argument('name', options_list=['--name', '-n'],
+    #                help='Name of app.')
+    #     c.argument('location', get_location_type(self.cli_ctx))
+    #     c.argument('tags', tags_type)
 
     # ignore global az arg --subscription and requre base_url for everything except `tc create`
     for scope in ['tc status', 'tc upgrade', 'tc user', 'tc project', 'tc project-type', 'tc provider', 'tc tag']:
@@ -82,17 +83,20 @@ def load_arguments(self, _):
 
     # TeamCloud
 
+    for scope in ['tc create', 'tc upgrade']:
+        with self.argument_context(scope) as c:
+            c.argument('version', options_list=['--version', '-v'],
+                       type=str, help='TeamCloud release version. Defaults to the latest stable version.',
+                       validator=source_version_validator)
+
     with self.argument_context('tc create') as c:
-        c.argument('resource_group_name', arg_type=resource_group_name_type, default='TeamCloud')
+        c.argument('resource_group_name', resource_group_name_type, default='TeamCloud')
         c.argument('principal_name', help='Service principal name, or object id.')
         c.argument('principal_password', help="Service principal password, aka 'client secret'.")
         c.argument('skip_deploy', action='store_true', help="Only create Azure resources, skip deploying the TeamCloud API and Orchestrator.")
 
     with self.argument_context('tc upgrade') as c:
-        c.argument('version', options_list=['--version', '-v'],
-                   type=str, help='TeamCloud release version.',
-                   validator=source_version_validator)
-        c.argument('resource_group_name', arg_type=resource_group_name_type, default='TeamCloud')
+        c.argument('resource_group_name', resource_group_name_type, default='TeamCloud')
 
     with self.argument_context('tc status') as c:
         c.argument('project', project_name_or_id_type, completer=get_project_completion_list)
@@ -201,15 +205,22 @@ def load_arguments(self, _):
                        type=str, help='Provider id.',
                        validator=provider_id_validator)
 
+    for scope in ['tc provider deploy', 'tc provider upgrade']:
+        with self.argument_context(scope) as c:
+            c.argument('provider', get_enum_type(['azure.appinsights', 'azure.devops', 'azure.devtestlabs']),
+                       options_list=['--name', '-n'], help='Provider id.')
+            c.argument('resource_group_name',
+                       resource_group_name_type, default='TeamCloud-Providers',
+                       help='Name of resource group.')
+            c.argument('version', options_list=['--version', '-v'],
+                       type=str, help='Provider release version.',
+                       validator=source_version_validator)
+
     with self.argument_context('tc provider deploy') as c:
-        c.argument('provider', get_enum_type(['azure.appinsights', 'azure.devops', 'azure.devtestlabs']),
-                   options_list=['--name', '-n'], help='Provider id.')
-        c.argument('version', options_list=['--version', '-v'],
-                   type=str, help='Provider release version.',
-                   validator=source_version_validator)
-        c.argument('resource_group_name',
-                   arg_type=resource_group_name_type, default='TeamCloud-Providers',
-                   help='Name of resource group.')
-        c.argument('teamcloud_resource_group_name', options_list=['--teamcloud-resource-group'],
-                   arg_type=resource_group_name_type, default='TeamCloud',
+        c.argument('location', get_location_type(self.cli_ctx),
+                   help='Location. Ignored unless --use-teamcloud-location is false. Values from: `az account list-locations`. You can configure the default location using `az configure --defaults location=<location>`.')
+        c.argument('teamcloud_resource_group_name', resource_group_name_type,
+                   options_list=['--teamcloud-resource-group'], default='TeamCloud',
                    help='Name of TeamCloud resource group.')
+        c.argument('use_teamcloud_location', get_three_state_flag(), default='true',
+                   help='Use the TeamCloud instance location.')
