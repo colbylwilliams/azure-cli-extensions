@@ -28,7 +28,13 @@ def tc_create_validator(cmd, namespace):
         if namespace.principal_name is None:
             raise CLIError(
                 '--principal-name must be have a value if --principal-password is specified')
-
+    if namespace.version:
+        namespace.version = namespace.version.lower()
+        if namespace.version[:1].isdigit():
+            namespace.version = 'v' + namespace.version
+        if not _is_valid_version(namespace.version):
+            raise CLIError(
+                '--version should be in format v0.0.0 do not include -pre suffix')
     if namespace.name is not None:
         from ._client_factory import web_client_factory
         # from azure.cli.core.profiles import ResourceType, get_sdk

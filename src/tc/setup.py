@@ -15,17 +15,16 @@ except ImportError:
     logger.warn("Wheel is not available, disabling bdist_wheel hook")
 
 # Must match a HISTORY.rst entry.
-VERSION = '0.2.1'
+VERSION = '0.3.0'
 
 # The full list of classifiers is available at
 # https://pypi.python.org/pypi?%3Aaction=list_classifiers
 CLASSIFIERS = [
-    'Development Status :: 3 - Alpha',
+    'Development Status :: 4 - Beta',
     'Intended Audience :: Developers',
     'Intended Audience :: System Administrators',
     'Programming Language :: Python',
     'Programming Language :: Python :: 3',
-    'Programming Language :: Python :: 3.5',
     'Programming Language :: Python :: 3.6',
     'Programming Language :: Python :: 3.7',
     'Programming Language :: Python :: 3.8',

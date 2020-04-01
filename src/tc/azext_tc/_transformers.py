@@ -20,10 +20,6 @@ def transform_output(result):
     if isinstance(result, StatusResult):
         return transform_status(result)
 
-    # if --raw was passed may be ClientRawResponse
-    # if isinstance(result, ClientRawResponse):
-    #     return result.output
-
     # assume DataResult
     try:
         return result.data

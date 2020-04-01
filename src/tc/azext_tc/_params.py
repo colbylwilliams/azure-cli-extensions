@@ -8,11 +8,7 @@ import platform
 
 from knack.arguments import CLIArgumentType
 from azure.cli.core.commands.parameters import (
-    tags_type,
-    get_enum_type,
-    get_location_type,
-    get_three_state_flag,
-    resource_group_name_type)
+    tags_type, get_enum_type, get_location_type, resource_group_name_type)
 
 from ._validators import (
     project_name_validator, project_name_or_id_validator, user_name_validator, user_name_or_id_validator,
@@ -38,17 +34,17 @@ def load_arguments(self, _):
 
     user_name_type = CLIArgumentType(
         options_list=['--name', '-n'],
-        help='User email or principal id.',
+        help='User email.',
         validator=user_name_validator)
 
     user_name_or_id_type = CLIArgumentType(
         options_list=['--name', '-n'],
-        help='User id, email, or principal id.',
+        help='User id (uuid) or email.',
         validator=user_name_or_id_validator)
 
     project_name_or_id_type = CLIArgumentType(
         options_list=['--project', '-p'],
-        help='Project name or id (uuid).',
+        help='Project id (uuid) or name.',
         validator=project_name_or_id_validator,
         completer=get_project_completion_list)
 
@@ -59,44 +55,45 @@ def load_arguments(self, _):
 
     # Global
 
-    # with self.argument_context('tc') as c:
-    #     c.argument('name', options_list=['--name', '-n'],
-    #                help='Name of app.')
-    #     c.argument('location', get_location_type(self.cli_ctx))
-    #     c.argument('tags', tags_type)
-
     # ignore global az arg --subscription and requre base_url for everything except `tc create`
     for scope in ['tc status', 'tc upgrade', 'tc user', 'tc project', 'tc project-type', 'tc provider', 'tc tag']:
-        with self.argument_context(scope, arg_group='TeamCloud Global') as c:
+        with self.argument_context(scope, arg_group='TeamCloud') as c:
             c.ignore('_subscription')
             c.argument('base_url', tc_url_type)
 
     # Tags
 
+    for scope in ['tc tag create', 'tc tag show', 'tc tag delete', 'tc project tag create', 'tc project tag show', 'tc project tag delete']:
+        with self.argument_context(scope) as c:
+            c.argument('tag_key', options_list=['--key', '-k'], help='Tag key.')
+
     for scope in ['tc tag create', 'tc project tag create']:
         with self.argument_context(scope) as c:
-            c.argument('tag_key', options_list=['--key', '-k'])
+            c.argument('tag_value', options_list=['--value', '-v'], help='Tag value.')
 
-    for scope in ['tc tag show', 'tc tag delete', 'tc project tag show', 'tc project tag delete']:
-        with self.argument_context(scope) as c:
-            c.argument('tag_value', options_list=['--value', '-v'])
+    with self.argument_context('tc project tag') as c:
+        c.argument('project', project_name_or_id_type)
 
     # TeamCloud
 
-    for scope in ['tc create', 'tc upgrade']:
-        with self.argument_context(scope) as c:
-            c.argument('version', options_list=['--version', '-v'],
-                       type=str, help='TeamCloud release version. Defaults to the latest stable version.',
-                       validator=source_version_validator)
-
+    # tc create uses a command level validator, param validators will be ignored
     with self.argument_context('tc create') as c:
-        c.argument('resource_group_name', resource_group_name_type, default='TeamCloud')
+        c.argument('name', options_list=['--name', '-n'],
+                   help='Name of app. Must be globally unique and will be the subdomain for the TeamCloud instance service endpoint.')
+        c.argument('resource_group_name', resource_group_name_type,
+                   default='TeamCloud')
         c.argument('principal_name', help='Service principal name, or object id.')
         c.argument('principal_password', help="Service principal password, aka 'client secret'.")
-        c.argument('skip_deploy', action='store_true', help="Only create Azure resources, skip deploying the TeamCloud API and Orchestrator.")
+        c.argument('tags', tags_type)
+        c.argument('version', options_list=['--version', '-v'],
+                   help='TeamCloud version. Default: latest stable.')
+        c.argument('skip_deploy', action='store_true',
+                   help="Only create Azure resources, skip deploying the TeamCloud API and Orchestrator.")
 
     with self.argument_context('tc upgrade') as c:
         c.argument('resource_group_name', resource_group_name_type, default='TeamCloud')
+        c.argument('version', options_list=['--version', '-v'], help='TeamCloud version. Default: latest stable.',
+                   validator=source_version_validator)
 
     with self.argument_context('tc status') as c:
         c.argument('project', project_name_or_id_type, completer=get_project_completion_list)
@@ -123,7 +120,7 @@ def load_arguments(self, _):
                    type=str, help='Project name.',
                    validator=project_name_validator)
         c.argument('project_type', options_list=['--project-type', '-t'],
-                   type=str, help='Project type id.',
+                   type=str, help='Project type id. Use `az tc project-type list` to get available project types',
                    validator=project_type_id_validator)
         c.argument('tags', tags_type)
 
@@ -133,9 +130,6 @@ def load_arguments(self, _):
                        type=str, help='Project name or id (uuid).',
                        validator=project_name_or_id_validator,
                        completer=get_project_completion_list)
-
-    with self.argument_context('tc project tag') as c:
-        c.argument('project', project_name_or_id_type)
 
     # Project Users
 
@@ -161,7 +155,7 @@ def load_arguments(self, _):
         c.argument('location', get_location_type(self.cli_ctx),
                    help='Project type region.')
         c.argument('subscriptions', nargs='+',
-                   help='Space-seperated subscription ids (3+).',
+                   help='Space-seperated subscription ids (3+ uuids).',
                    validator=subscriptions_list_validator)
         c.argument('subscription_capacity', type=int, default=10,
                    help='Maximum number of projects per subscription.')
@@ -170,7 +164,7 @@ def load_arguments(self, _):
         c.argument('resource_group_name_prefix', type=str,
                    help='Prepended to all project resource group names.')
         c.argument('provider', nargs='+', action=CreateProviderReference,
-                   help='Project type provider: provider_id [key=value ...]. Use depends_on key to define dependencies. Use multiple --provider arguemnts to specify multiple providers.')
+                   help='Project type provider: provider_id [key=value ...]. Use depends_on key to define dependencies. Use multiple --provider arguemnts to specify additional providers.')
         c.argument('tags', tags_type)
         c.argument('properties', properties_type)
         c.ignore('providers')
@@ -183,14 +177,11 @@ def load_arguments(self, _):
 
     # Providers
 
-    with self.argument_context('tc provider create') as c:
-        c.argument('provider', options_list=['--name', '-n'],
-                   type=str, help='Provider id.',
-                   validator=provider_id_validator)
-        c.argument('url', type=str, help='Provider url.',
-                   validator=url_validator)
-        c.argument('auth_code', type=str, help='Provider auth code.',
-                   validator=auth_code_validator)
+    for scope in ['tc provider create', 'tc provider show', 'tc provider delete']:
+        with self.argument_context(scope) as c:
+            c.argument('provider', options_list=['--name', '-n'],
+                       type=str, help='Provider id.',
+                       validator=provider_id_validator)
 
     for scope in ['tc provider create', 'tc provider deploy']:
         with self.argument_context(scope) as c:
@@ -199,11 +190,11 @@ def load_arguments(self, _):
                        validator=provider_event_list_validator)
             c.argument('properties', properties_type)
 
-    for scope in ['tc provider show', 'tc provider delete']:
-        with self.argument_context(scope) as c:
-            c.argument('provider', options_list=['--name', '-n'],
-                       type=str, help='Provider id.',
-                       validator=provider_id_validator)
+    with self.argument_context('tc provider create') as c:
+        c.argument('url', type=str, help='Provider url.',
+                   validator=url_validator)
+        c.argument('auth_code', type=str, help='Provider auth code.',
+                   validator=auth_code_validator)
 
     for scope in ['tc provider deploy', 'tc provider upgrade']:
         with self.argument_context(scope) as c:
@@ -213,14 +204,8 @@ def load_arguments(self, _):
                        resource_group_name_type, default='TeamCloud-Providers',
                        help='Name of resource group.')
             c.argument('version', options_list=['--version', '-v'],
-                       type=str, help='Provider release version.',
+                       type=str, help='Provider version. Default: latest stable.',
                        validator=source_version_validator)
 
     with self.argument_context('tc provider deploy') as c:
-        c.argument('location', get_location_type(self.cli_ctx),
-                   help='Location. Ignored unless --use-teamcloud-location is false. Values from: `az account list-locations`. You can configure the default location using `az configure --defaults location=<location>`.')
-        c.argument('teamcloud_resource_group_name', resource_group_name_type,
-                   options_list=['--teamcloud-resource-group'], default='TeamCloud',
-                   help='Name of TeamCloud resource group.')
-        c.argument('use_teamcloud_location', get_three_state_flag(), default='true',
-                   help='Use the TeamCloud instance location.')
+        c.argument('location', get_location_type(self.cli_ctx))

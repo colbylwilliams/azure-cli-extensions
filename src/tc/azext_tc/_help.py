@@ -22,7 +22,7 @@ short-summary: Create a new TeamCloud instance.
 
 helps['tc upgrade'] = """
 type: command
-short-summary: Upgrade source version of a TeamCloud instance.
+short-summary: Upgrade a TeamCloud instance version.
 examples:
   - name: Upgrade a TeamCloud instance to the latest release.
     text: az tc upgrade
@@ -377,7 +377,7 @@ examples:
 
 helps['tc provider upgrade'] = """
 type: command
-short-summary: Upgrade version of a provider.
+short-summary: Upgrade a provider version.
 examples:
   - name: Upgrade provider to the latest version.
     text: az tc provider upgrade --name azure.devtestlabs

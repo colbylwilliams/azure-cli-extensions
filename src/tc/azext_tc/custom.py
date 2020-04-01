@@ -162,7 +162,21 @@ def teamcloud_upgrade(cmd, client, base_url, resource_group_name='TeamCloud', ve
     _zip_deploy_app(cmd.cli_ctx, resource_group_name, name, 'https://github.com/microsoft/TeamCloud', 'TeamCloud.API', version=version)
 
     version_string = version or 'the latest version'
-    return "TeamCloud instance '{}' was successfully upgraded to {}.".format(name, version_string)
+    logger.warning("TeamCloud instance '%s' was successfully upgraded to %s.", name, version_string)
+
+    result = {
+        'version': version or 'latest',
+        'name': name,
+        'base_url': base_url,
+        'api': {
+            'name': name
+        },
+        'orchestrator': {
+            'name': name + '-orchestrator'
+        }
+    }
+
+    return result
 
 
 def status_get(cmd, client, base_url, tracking_id, project=None):
@@ -377,7 +391,7 @@ def provider_get(cmd, client, base_url, provider):
     return client.get_provider_by_id(provider)
 
 
-def provider_deploy(cmd, client, base_url, provider, resource_group_name='TeamCloud-Providers', location=None, teamcloud_resource_group_name='TeamCloud', events=None, properties=None, version=None, use_teamcloud_location=True):
+def provider_deploy(cmd, client, base_url, provider, location, resource_group_name='TeamCloud-Providers', events=None, properties=None, version=None):
     from azure.cli.core.util import random_string
     client._client.config.base_url = base_url
     cli_ctx = cmd.cli_ctx
@@ -392,16 +406,6 @@ def provider_deploy(cmd, client, base_url, provider, resource_group_name='TeamCl
 
     if zip_name is None:
         raise CLIError("--provider is invalid.  Must be one of 'azure.appinsights', 'azure.devops', 'azure.devtestlabs'")
-
-    if use_teamcloud_location:
-        # get location from teamcloud resource group
-        tc_rg, _ = _get_resource_group_by_name(cli_ctx, teamcloud_resource_group_name)
-        if tc_rg is None:
-            logger.warning("Resource group '%s' not found.", teamcloud_resource_group_name)
-            raise CLIError("Resource group '{}' must exist in current subscription or must provide a value for --location.".format(teamcloud_resource_group_name))
-        location = tc_rg.location.lower()
-    elif location is None:
-        raise CLIError("--location must have value if --use-teamcloud-location is false")
 
     # look for existing resource group
     logger.warning("Getting resource group '%s'...", resource_group_name)
@@ -470,7 +474,9 @@ def provider_upgrade(cmd, client, base_url, provider, resource_group_name='TeamC
     _zip_deploy_app(cli_ctx, resource_group_name, name, 'https://github.com/microsoft/TeamCloud-Providers', zip_name, version=version)
 
     version_string = version or 'the latest version'
-    return "Provider '{}' was successfully upgraded to {}.".format(name, version_string)
+    logger.warning("Provider '%s' was successfully upgraded to %s.", name, version_string)
+
+    return provider_result.data
 
 
 # Util
@@ -879,7 +885,6 @@ def _zip_deploy_app(cli_ctx, resource_group_name, name, repo_url, zip_name, vers
     authorization = urllib3.util.make_headers(basic_auth='{}:{}'.format(creds.publishing_user_name, creds.publishing_password))
 
     zip_package_uri = '{}/releases/latest/download/{}.zip'.format(repo_url, zip_name)
-
     if version:
         zip_package_uri = '{}/releases/download/{}/{}.zip'.format(repo_url, version, zip_name)
 
