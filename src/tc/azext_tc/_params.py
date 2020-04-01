@@ -55,7 +55,7 @@ def load_arguments(self, _):
 
     # Global
 
-    # ignore global az arg --subscription and requre base_url for everything except `tc create`
+    # ignore global az arg --subscription and requre base_url for everything except `tc deploy`
     for scope in ['tc status', 'tc upgrade', 'tc user', 'tc project', 'tc project-type', 'tc provider', 'tc tag']:
         with self.argument_context(scope, arg_group='TeamCloud') as c:
             c.ignore('_subscription')
@@ -76,8 +76,8 @@ def load_arguments(self, _):
 
     # TeamCloud
 
-    # tc create uses a command level validator, param validators will be ignored
-    with self.argument_context('tc create') as c:
+    # tc deploy uses a command level validator, param validators will be ignored
+    with self.argument_context('tc deploy') as c:
         c.argument('name', options_list=['--name', '-n'],
                    help='Name of app. Must be globally unique and will be the subdomain for the TeamCloud instance service endpoint.')
         c.argument('resource_group_name', resource_group_name_type,

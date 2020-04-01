@@ -15,9 +15,14 @@ type: group
 short-summary: Manage TeamCloud instances.
 """
 
-helps['tc create'] = """
+helps['tc deploy'] = """
 type: command
-short-summary: Create a new TeamCloud instance.
+short-summary: Deploy a new TeamCloud instance.
+examples:
+  - name: Deploy a new TeamCloud instance.
+    text: az tc provider deploy --name myawesomeapp
+  - name: Deploy a TeamCloud instance to a specific pre-release.
+    text: az tc provider deploy --name myawesomeapp --version v0.1.1
 """
 
 helps['tc upgrade'] = """

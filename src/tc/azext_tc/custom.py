@@ -20,7 +20,7 @@ STATUS_POLLING_SLEEP_INTERVAL = 2
 
 # TeamCloud
 
-def teamcloud_create(cmd, client, name, location, resource_group_name='TeamCloud', principal_name=None, principal_password=None, tags=None, version=None, skip_deploy=False):  # pylint: disable=too-many-statements
+def teamcloud_deploy(cmd, client, name, location, resource_group_name='TeamCloud', principal_name=None, principal_password=None, tags=None, version=None, skip_deploy=False):  # pylint: disable=too-many-statements
     from azure.cli.core._profile import Profile
     from .vendored_sdks.teamcloud.models import UserDefinition
 

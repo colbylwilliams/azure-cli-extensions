@@ -8,7 +8,7 @@ from ._client_factory import teamcloud_client_factory
 from ._transformers import (transform_output, transform_user_table_output, transform_project_table_output,
                             transform_project_type_table_output, transform_provider_table_output,
                             transform_tag_table_output)
-from ._validators import tc_create_validator
+from ._validators import tc_deploy_validator
 
 
 def load_command_table(self, _):
@@ -19,8 +19,8 @@ def load_command_table(self, _):
         pass
 
     with self.command_group('tc', client_factory=teamcloud_client_factory) as g:
-        g.custom_command('create', 'teamcloud_create', transform=transform_output,
-                         validator=tc_create_validator)
+        g.custom_command('deploy', 'teamcloud_deploy', transform=transform_output,
+                         validator=tc_deploy_validator)
         g.custom_command('upgrade', 'teamcloud_upgrade')
         g.custom_command('status', 'status_get', transform=transform_output)
 

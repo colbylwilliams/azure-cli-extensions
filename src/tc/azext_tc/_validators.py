@@ -19,7 +19,7 @@ logger = get_logger(__name__)
 # pylint: disable=unused-argument, protected-access, import-outside-toplevel
 
 
-def tc_create_validator(cmd, namespace):
+def tc_deploy_validator(cmd, namespace):
     if namespace.principal_name is not None:
         if namespace.principal_password is None:
             raise CLIError(
