@@ -37,8 +37,6 @@ def tc_create_validator(cmd, namespace):
                 '--version should be in format v0.0.0 do not include -pre suffix')
     if namespace.name is not None:
         from ._client_factory import web_client_factory
-        # from azure.cli.core.profiles import ResourceType, get_sdk
-        # ResourceNameAvailability = get_sdk(cmd.cli_ctx, ResourceType.MGMT_APPSERVICE, 'ResourceNameAvailability', mod='models')
 
         name_clean = ''
         for n in namespace.name.lower():

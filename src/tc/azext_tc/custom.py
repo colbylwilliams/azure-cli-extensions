@@ -11,10 +11,6 @@ from azure.cli.core.commands import LongRunningOperation
 from azure.cli.core.profiles import ResourceType, get_sdk
 from azure.cli.core.util import sdk_no_wait
 
-# TODO: REMOVE THIS
-# import urllib3  # pylint: disable=wrong-import-order
-# urllib3.disable_warnings()
-
 logger = get_logger(__name__)
 
 STATUS_POLLING_SLEEP_INTERVAL = 2
@@ -26,6 +22,7 @@ STATUS_POLLING_SLEEP_INTERVAL = 2
 
 def teamcloud_create(cmd, client, name, location, resource_group_name='TeamCloud', principal_name=None, principal_password=None, tags=None, version=None, skip_deploy=False):  # pylint: disable=too-many-statements
     from azure.cli.core._profile import Profile
+    from .vendored_sdks.teamcloud.models import UserDefinition
 
     cli_ctx = cmd.cli_ctx
 
@@ -58,7 +55,7 @@ def teamcloud_create(cmd, client, name, location, resource_group_name='TeamCloud
     logger.warning('Creating web jobs storage account...')
     wj_storage = _create_storage_account(cli_ctx, name_short + 'wjstorage', resource_group_name, location, tags)
 
-    logger.warning('Creating cosmos db account. This will take several minutes to complete...')
+    logger.warning('Creating cosmos db account. This may take several minutes to complete...')
     cosmosdb = _create_cosmosdb_account(cli_ctx, name_short + 'database', resource_group_name, location, tags)
 
     profile = Profile(cli_ctx=cli_ctx)
@@ -107,7 +104,10 @@ def teamcloud_create(cmd, client, name, location, resource_group_name='TeamCloud
         logger.warning('Successfully created TeamCloud instance.')
         logger.warning('Creating admin user...')
         me = profile.get_current_account_user()
-        _ = teamcloud_user_create(cmd, client, base_url, me, user_role='Admin')
+
+        client._client.config.base_url = base_url
+        user_definition = UserDefinition(email=me, role='Admin', tags=None)
+        _ = client.create_team_cloud_admin_user(user_definition)
 
     logger.warning(
         'TeamCloud instance successfully created at: %s. Use `az configure --defaults tc-base-url=%s` to configure this as your default TeamCloud instance', base_url, base_url)
@@ -167,7 +167,7 @@ def teamcloud_upgrade(cmd, client, base_url, resource_group_name='TeamCloud', ve
     result = {
         'version': version or 'latest',
         'name': name,
-        'base_url': base_url,
+        'base_url': '{}'.format(base_url),
         'api': {
             'name': name
         },
@@ -491,8 +491,7 @@ def _create_with_status(cmd, client, base_url, payload, create_func, project_id=
 
     hook.add(message='Starting: Creating new {}'.format(type_name))
 
-    result = create_func(
-        project_id, payload) if project_id else create_func(payload)
+    result = create_func(project_id, payload) if project_id else create_func(payload)
 
     while isinstance(result, StatusResult):
         if result.code == 200:
@@ -888,7 +887,7 @@ def _zip_deploy_app(cli_ctx, resource_group_name, name, repo_url, zip_name, vers
     if version:
         zip_package_uri = '{}/releases/download/{}/{}.zip'.format(repo_url, version, zip_name)
 
-    logger.warning("Starting zip deployment. This will take several minutes to complete...")
+    logger.warning("Starting zip deployment. This may take several minutes to complete...")
     res = requests.put(zipdeploy_url, headers=authorization, json={'packageUri': zip_package_uri}, verify=not should_disable_connection_verify())
 
     # check if there's an ongoing process
