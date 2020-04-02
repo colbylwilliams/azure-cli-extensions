@@ -2,6 +2,7 @@
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # Licensed under the MIT License. See License.txt in the project root for license information.
 # --------------------------------------------------------------------------------------------
+# pylint: disable=unused-argument, protected-access, line-too-long, too-many-locals, import-outside-toplevel
 
 from time import sleep
 from urllib.parse import urlparse
@@ -15,12 +16,10 @@ logger = get_logger(__name__)
 
 STATUS_POLLING_SLEEP_INTERVAL = 2
 
-# pylint: disable=unused-argument, protected-access, line-too-long, too-many-locals, import-outside-toplevel
-
 
 # TeamCloud
 
-def teamcloud_deploy(cmd, client, name, location, resource_group_name='TeamCloud', principal_name=None, principal_password=None, tags=None, version=None, skip_deploy=False):  # pylint: disable=too-many-statements
+def teamcloud_deploy(cmd, client, name, location, resource_group_name='TeamCloud', principal_name=None, principal_password=None, tags=None, version=None, skip_app_deployment=False, skip_name_validation=False, skip_admin_user=False):  # pylint: disable=too-many-statements
     from azure.cli.core._profile import Profile
     from .vendored_sdks.teamcloud.models import UserDefinition
 
@@ -79,7 +78,7 @@ def teamcloud_deploy(cmd, client, name, location, resource_group_name='TeamCloud
 
     logger.warning('Creating orchestrator function app...')
     orchestrator, orchestrator_host_key = _create_function_app(cli_ctx, name + '-orchestrator', resource_group_name, location,
-                                                               wj_storage, th_storage, appconfig, appinsights, tags)
+                                                               wj_storage, th_storage, appconfig, appinsights, tags, with_identitiy=True)
 
     logger.warning('Adding orchestrator info to app configuration service...')
     _set_appconfig_orchestrator_keys(cli_ctx, subscription_id, appconfig, orchestrator, orchestrator_host_key)
@@ -90,9 +89,8 @@ def teamcloud_deploy(cmd, client, name, location, resource_group_name='TeamCloud
     logger.warning('Successfully deployed Azure resources for TeamCloud')
     base_url = 'https://{}'.format(api_app.default_host_name)
 
-    if skip_deploy:
-        logger.warning('IMPORTANT: --skip-deploy prevented source code for the TeamCloud instance deployment. To deploy the applicaitons use `az tc upgrade`.')
-
+    if skip_app_deployment:
+        logger.warning('IMPORTANT: --skip-deploy prevented source code for the TeamCloud instance deployment. To deploy the applications use `az tc upgrade`.')
     else:
         logger.warning('Deploying orchestrator source code...')
         _zip_deploy_app(cli_ctx, resource_group_name, name + '-orchestrator', 'https://github.com/microsoft/TeamCloud',
@@ -102,6 +100,10 @@ def teamcloud_deploy(cmd, client, name, location, resource_group_name='TeamCloud
         _zip_deploy_app(cli_ctx, resource_group_name, name, 'https://github.com/microsoft/TeamCloud', 'TeamCloud.API', version=version, app_instance=api_app)
 
         logger.warning('Successfully created TeamCloud instance.')
+
+    if skip_admin_user:
+        logger.warning('IMPORTANT: --redeploy prevented adding you as an Admin user to the TeamCloud instance deployment.')
+    else:
         logger.warning('Creating admin user...')
         me = profile.get_current_account_user()
 
@@ -113,7 +115,7 @@ def teamcloud_deploy(cmd, client, name, location, resource_group_name='TeamCloud
         'TeamCloud instance successfully created at: %s. Use `az configure --defaults tc-base-url=%s` to configure this as your default TeamCloud instance', base_url, base_url)
 
     result = {
-        'deployed': not skip_deploy,
+        'deployed': not skip_app_deployment,
         'version': version or 'latest',
         'name': name,
         'base_url': base_url,
@@ -226,8 +228,6 @@ def teamcloud_tag_delete(cmd, client, base_url, tag_key):
     client._client.config.base_url = base_url
     return _delete_with_status(cmd, client, base_url, tag_key, client.delete_team_cloud_tag)
 
-# TODO update
-
 
 def teamcloud_tag_list(cmd, client, base_url):
     client._client.config.base_url = base_url
@@ -311,8 +311,6 @@ def project_tag_delete(cmd, client, base_url, project, tag_key):
     client._client.config.base_url = base_url
     return _delete_with_status(cmd, client, base_url, tag_key, client.delete_project_tag, project)
 
-# TODO update
-
 
 def project_tag_list(cmd, client, base_url, project):
     client._client.config.base_url = base_url
@@ -391,7 +389,7 @@ def provider_get(cmd, client, base_url, provider):
     return client.get_provider_by_id(provider)
 
 
-def provider_deploy(cmd, client, base_url, provider, location, resource_group_name='TeamCloud-Providers', events=None, properties=None, version=None):
+def provider_deploy(cmd, client, base_url, provider, location, resource_group_name='TeamCloud-Providers', events=None, properties=None, version=None, tags=None):
     from azure.cli.core.util import random_string
     client._client.config.base_url = base_url
     cli_ctx = cmd.cli_ctx
@@ -407,7 +405,6 @@ def provider_deploy(cmd, client, base_url, provider, location, resource_group_na
     if zip_name is None:
         raise CLIError("--provider is invalid.  Must be one of 'azure.appinsights', 'azure.devops', 'azure.devtestlabs'")
 
-    # look for existing resource group
     logger.warning("Getting resource group '%s'...", resource_group_name)
     rg, _ = _get_resource_group_by_name(cli_ctx, resource_group_name)
     if rg is None:
@@ -424,7 +421,7 @@ def provider_deploy(cmd, client, base_url, provider, location, resource_group_na
     wj_storage = _create_storage_account(cli_ctx, name + 'wjstorage', resource_group_name, location)
 
     logger.warning('Creating provider function app...')
-    functionapp, host_key = _create_function_app(cli_ctx, name, resource_group_name, location, wj_storage, th_storage)
+    functionapp, host_key = _create_function_app(cli_ctx, name, resource_group_name, location, wj_storage, th_storage, tags=tags, with_identitiy=True)
 
     url = 'https://{}'.format(functionapp.default_host_name)
 
@@ -732,11 +729,11 @@ def _create_api_app(cli_ctx, name, resource_group_name, location, appconfig, app
     return webapp
 
 
-def _create_function_app(cli_ctx, name, resource_group_name, location, wj_storage, th_storage, appconfig=None, app_insights=None, tags=None):
+def _create_function_app(cli_ctx, name, resource_group_name, location, wj_storage, th_storage, appconfig=None, app_insights=None, tags=None, with_identitiy=False):
     from ._client_factory import web_client_factory
     from azure.cli.core.util import send_raw_request
-    SiteConfig, Site, NameValuePair, ConnStringInfo = get_sdk(
-        cli_ctx, ResourceType.MGMT_APPSERVICE, 'SiteConfig', 'Site', 'NameValuePair', 'ConnStringInfo', mod='models')
+    SiteConfig, Site, NameValuePair, ConnStringInfo, ManagedServiceIdentity = get_sdk(
+        cli_ctx, ResourceType.MGMT_APPSERVICE, 'SiteConfig', 'Site', 'NameValuePair', 'ConnStringInfo', 'ManagedServiceIdentity', mod='models')
 
     web_client = web_client_factory(cli_ctx)
 
@@ -769,8 +766,21 @@ def _create_function_app(cli_ctx, name, resource_group_name, location, wj_storag
     functionapp_def.location = location
     functionapp_def.kind = 'functionapp'
 
+    if with_identitiy:
+        functionapp_def.identity = ManagedServiceIdentity(type='SystemAssigned')
+
     poller = web_client.web_apps.create_or_update(resource_group_name, name, functionapp_def)
     functionapp = LongRunningOperation(cli_ctx)(poller)
+
+    if with_identitiy:
+        def getter():
+            return functionapp
+
+        def setter(webapp):
+            return webapp
+
+        from azure.cli.core.commands.arm import assign_identity as _assign_identity
+        functionapp = _assign_identity(cli_ctx, getter, setter, 'Contributor', functionapp.id)
 
     admin_token = web_client.web_apps.get_functions_admin_token(resource_group_name, name)
 

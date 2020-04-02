@@ -87,8 +87,12 @@ def load_arguments(self, _):
         c.argument('tags', tags_type)
         c.argument('version', options_list=['--version', '-v'],
                    help='TeamCloud version. Default: latest stable.')
-        c.argument('skip_deploy', action='store_true',
-                   help="Only create Azure resources, skip deploying the TeamCloud API and Orchestrator.")
+        c.argument('skip_app_deployment', action='store_true',
+                   help="Only create Azure resources, skip deploying the TeamCloud API and Orchestrator apps.")
+        c.argument('skip_name_validation', action='store_true',
+                   help="Skip name validaiton. Useful when attempting to redeploy a partial or failed deployment.")
+        c.argument('skip_admin_user', action='store_true',
+                   help="Skip adding Admin user.")
 
     with self.argument_context('tc upgrade') as c:
         c.argument('resource_group_name', resource_group_name_type, default='TeamCloud')
@@ -155,7 +159,7 @@ def load_arguments(self, _):
         c.argument('location', get_location_type(self.cli_ctx),
                    help='Project type region.')
         c.argument('subscriptions', nargs='+',
-                   help='Space-seperated subscription ids (3+ uuids).',
+                   help='Space-seperated subscription ids (uuids).',
                    validator=subscriptions_list_validator)
         c.argument('subscription_capacity', type=int, default=10,
                    help='Maximum number of projects per subscription.')
@@ -209,3 +213,4 @@ def load_arguments(self, _):
 
     with self.argument_context('tc provider deploy') as c:
         c.argument('location', get_location_type(self.cli_ctx))
+        c.argument('tags', tags_type)

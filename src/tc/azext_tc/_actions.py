@@ -2,6 +2,7 @@
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # Licensed under the MIT License. See License.txt in the project root for license information.
 # --------------------------------------------------------------------------------------------
+# pylint: disable=protected-access, too-few-public-methods, line-too-long
 
 import argparse
 from re import match
@@ -12,8 +13,6 @@ from knack.util import CLIError
 from .vendored_sdks.teamcloud.models import ProviderReference
 
 logger = get_logger(__name__)
-
-# pylint: disable=protected-access, too-few-public-methods, line-too-long
 
 
 class CreateProviderReference(argparse._AppendAction):
@@ -42,5 +41,5 @@ class CreateProviderReference(argparse._AppendAction):
 
             namespace.providers.append(ProviderReference(id=provider_id, properties=provider_properties, depends_on=provider_depends_on))
 
-        except IndexError:
+        except (IndexError, ValueError):
             raise CLIError('usage error: {} PROVIDER_ID [KEY=VALUE ...]'.format(option_string or '--provider'))

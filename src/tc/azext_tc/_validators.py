@@ -36,7 +36,6 @@ def tc_deploy_validator(cmd, namespace):
             raise CLIError(
                 '--version should be in format v0.0.0 do not include -pre suffix')
     if namespace.name is not None:
-        from ._client_factory import web_client_factory
 
         name_clean = ''
         for n in namespace.name.lower():
@@ -45,11 +44,16 @@ def tc_deploy_validator(cmd, namespace):
 
         namespace.name = name_clean
 
-        web_client = web_client_factory(cmd.cli_ctx)
-        availability = web_client.check_name_availability(namespace.name, 'Site')
-        if not availability.name_available:
-            raise CLIError(
-                '--name {}'.format(availability.message))
+        if namespace.skip_name_validation:
+            logger.warning('IMPORTANT: --skip-name-validation prevented unique name validation.')
+        else:
+            from ._client_factory import web_client_factory
+
+            web_client = web_client_factory(cmd.cli_ctx)
+            availability = web_client.check_name_availability(namespace.name, 'Site')
+            if not availability.name_available:
+                raise CLIError(
+                    '--name {}'.format(availability.message))
 
 
 def project_name_validator(cmd, namespace):
@@ -123,9 +127,9 @@ def provider_id_validator(cmd, namespace):
 
 def subscriptions_list_validator(cmd, namespace):
     if namespace.subscriptions:
-        if len(namespace.subscriptions) < 3 or not all(_is_valid_uuid(x) for x in namespace.subscriptions):
+        if len(namespace.subscriptions) < 1 or not all(_is_valid_uuid(x) for x in namespace.subscriptions):
             raise CLIError(
-                '--subscriptions should be a space-separated list of at least 3 valid uuids')
+                '--subscriptions should be a space-separated list of valid uuids')
 
 
 def provider_event_list_validator(cmd, namespace):
@@ -208,11 +212,11 @@ def _is_valid_project_name(name):
 
 
 def _is_valid_project_type_id(project_type_id):
-    return 5 <= len(project_type_id) <= 255 and match(r'^(?:[a-z][a-z0-9]+(?:\.[a-z0-9]+)+)$', project_type_id) is not None
+    return 5 <= len(project_type_id) <= 255 and match(r'^(?:[a-z][a-z0-9]+(?:\.?[a-z0-9]+)+)$', project_type_id) is not None
 
 
 def _is_valid_provider_id(provider_id):
-    return 5 <= len(provider_id) <= 255 and match(r'^(?:[a-z][a-z0-9]+(?:\.[a-z0-9]+)+)$', provider_id) is not None
+    return 5 <= len(provider_id) <= 255 and match(r'^(?:[a-z][a-z0-9]+(?:\.?[a-z0-9]+)+)$', provider_id) is not None
 
 
 def _is_valid_resource_id(resource_id):
