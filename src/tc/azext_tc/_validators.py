@@ -3,11 +3,6 @@
 # Licensed under the MIT License. See License.txt in the project root for license information.
 # --------------------------------------------------------------------------------------------
 
-# pylint: disable=line-too-long
-
-# Example of a storage account name or ID validator.
-# See: https://github.com/Azure/azure-cli/blob/dev/doc/authoring_command_modules/authoring_commands.md#supporting-name-or-id-parameters
-
 from re import match
 from uuid import UUID
 from azure.cli.core.util import CLIError
@@ -16,7 +11,7 @@ from .vendored_sdks.teamcloud.models import ErrorResult
 
 logger = get_logger(__name__)
 
-# pylint: disable=unused-argument, protected-access, import-outside-toplevel
+# pylint: disable=unused-argument, protected-access
 
 
 def tc_deploy_validator(cmd, namespace):
@@ -108,26 +103,29 @@ def project_type_id_validator(cmd, namespace):
     if namespace.project_type:
         if not _is_valid_project_type_id(namespace.project_type):
             raise CLIError(
-                '--project-type should start with a lowercase and contain only lowercase, numbers, and periods [.] with length [5,254]')
+                '--project-type should start with a lowercase and contain only lowercase, numbers, '
+                'and periods [.] with length [5,254]')
 
 
 def project_type_id_validator_name(cmd, namespace):
     if namespace.project_type:
         if not _is_valid_project_type_id(namespace.project_type):
             raise CLIError(
-                '--name should start with a lowercase and contain only lowercase, numbers, and periods [.] with length [5,254]')
+                '--name should start with a lowercase and contain only lowercase, numbers, '
+                'and periods [.] with length [5,254]')
 
 
 def provider_id_validator(cmd, namespace):
     if namespace.provider:
         if not _is_valid_provider_id(namespace.provider):
             raise CLIError(
-                '--name should start with a lowercase and contain only lowercase, numbers, and periods [.] with length [5,254]')
+                '--name should start with a lowercase and contain only lowercase, numbers, '
+                'and periods [.] with length [5,254]')
 
 
 def subscriptions_list_validator(cmd, namespace):
     if namespace.subscriptions:
-        if len(namespace.subscriptions) < 1 or not all(_is_valid_uuid(x) for x in namespace.subscriptions):
+        if not all(_is_valid_uuid(x) for x in namespace.subscriptions):
             raise CLIError(
                 '--subscriptions should be a space-separated list of valid uuids')
 
@@ -136,14 +134,18 @@ def provider_event_list_validator(cmd, namespace):
     if namespace.events:
         if not all(_is_valid_provider_id(x) for x in namespace.events):
             raise CLIError(
-                '--events should be a space-separated list of valid provider ids, provider ids should start with a lowercase and contain only lowercase, numbers, and periods [.] with length [5,254]')
+                '--events should be a space-separated list of valid provider ids, '
+                'provider ids should start with a lowercase and contain only lowercase, numbers, '
+                'and periods [.] with length [5,254]')
 
 
 def provider_depends_on_validator(cmd, namespace):
     if namespace.depends_on:
         if not all(_is_valid_provider_id(x) for x in namespace.depends_on):
             raise CLIError(
-                '--depends-on should be a space-separated list of valid provider ids, provider ids should start with a lowercase and contain only lowercase, numbers, and periods [.] with length [5,254]')
+                '--depends-on should be a space-separated list of valid provider ids, '
+                'provider ids should start with a lowercase and contain only lowercase, numbers, '
+                'and periods [.] with length [5,254]')
 
 
 def tc_resource_name_validator(cmd, namespace):
@@ -178,7 +180,8 @@ def auth_code_validator(cmd, namespace):
     if namespace.auth_code:
         if not _is_valid_functions_auth_code(namespace.auth_code):
             raise CLIError(
-                '--auth-code should contain only base-64 digits [A-Za-z0-9/] (excluding the plus sign (+)), ending in = or ==')
+                '--auth-code should contain only base-64 digits [A-Za-z0-9/] '
+                '(excluding the plus sign (+)), ending in = or ==')
 
 
 def source_version_validator(cmd, namespace):
@@ -212,11 +215,13 @@ def _is_valid_project_name(name):
 
 
 def _is_valid_project_type_id(project_type_id):
-    return 5 <= len(project_type_id) <= 255 and match(r'^(?:[a-z][a-z0-9]+(?:\.?[a-z0-9]+)+)$', project_type_id) is not None
+    return 5 <= len(project_type_id) <= 255 and match(
+        r'^(?:[a-z][a-z0-9]+(?:\.?[a-z0-9]+)+)$', project_type_id) is not None
 
 
 def _is_valid_provider_id(provider_id):
-    return 5 <= len(provider_id) <= 255 and match(r'^(?:[a-z][a-z0-9]+(?:\.?[a-z0-9]+)+)$', provider_id) is not None
+    return 5 <= len(provider_id) <= 255 and match(
+        r'^(?:[a-z][a-z0-9]+(?:\.?[a-z0-9]+)+)$', provider_id) is not None
 
 
 def _is_valid_resource_id(resource_id):
@@ -231,7 +236,8 @@ def _has_basic_email_format(email):
 
 
 def _is_valid_url(url):
-    return match(r'^http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\), ]|(?:%[0-9a-fA-F][0-9a-fA-F]))+$', url) is not None
+    return match(
+        r'^http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\), ]|(?:%[0-9a-fA-F][0-9a-fA-F]))+$', url) is not None
 
 
 def _is_valid_functions_auth_code(auth_code):

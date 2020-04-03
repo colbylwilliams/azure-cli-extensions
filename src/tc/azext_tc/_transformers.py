@@ -4,8 +4,6 @@
 # --------------------------------------------------------------------------------------------
 
 from collections import OrderedDict
-# from knack.util import CLIError
-# from msrest.pipeline import ClientRawResponse
 from knack.log import get_logger
 from .vendored_sdks.teamcloud.models import (ErrorResult, StatusResult)
 
@@ -121,8 +119,6 @@ def transform_provider_table_output(result):
             ('Code', '************'),
             ('Events', '\n'.join(item['events'])),
             ('Properties', str(item['properties'])),
-            # ('Tags', str(item['tags'])),
-            # ('Properties', '\n'.join(["'{}': '{}'".format(k, v) for k, v in item['properties'].items()]))
         ]))
 
     return resultList

@@ -3,7 +3,7 @@
 # Licensed under the MIT License. See License.txt in the project root for license information.
 # --------------------------------------------------------------------------------------------
 
-# pylint: disable=line-too-long, too-many-statements
+# pylint: disable=too-many-statements
 import platform
 
 from knack.arguments import CLIArgumentType
@@ -28,7 +28,8 @@ def load_arguments(self, _):
 
     tc_url_type = CLIArgumentType(
         options_list=['--base-url', '-u'],
-        help='Base url of the TeamCloud instance. Use `az configure --defaults tc-base-url=<url>` to configure a default.',
+        help='Base url of the TeamCloud instance. Use `az configure --defaults tc-base-url=<url>` '
+             'to configure a default.',
         configured_default='tc-base-url',
         validator=base_url_validator)
 
@@ -50,7 +51,8 @@ def load_arguments(self, _):
 
     properties_type = CLIArgumentType(
         validator=properties_validator,
-        help="Space-separated properties: key[=value] [key[=value] ...]. Use {} to clear existing properties.".format(quotes),
+        help='Space-separated properties: key[=value] [key[=value] ...].'
+             'Use {} to clear existing properties.'.format(quotes),
         nargs='*')
 
     # Global
@@ -63,7 +65,8 @@ def load_arguments(self, _):
 
     # Tags
 
-    for scope in ['tc tag create', 'tc tag show', 'tc tag delete', 'tc project tag create', 'tc project tag show', 'tc project tag delete']:
+    for scope in ['tc tag create', 'tc tag show', 'tc tag delete',
+                  'tc project tag create', 'tc project tag show', 'tc project tag delete']:
         with self.argument_context(scope) as c:
             c.argument('tag_key', options_list=['--key', '-k'], help='Tag key.')
 
@@ -79,7 +82,8 @@ def load_arguments(self, _):
     # tc deploy uses a command level validator, param validators will be ignored
     with self.argument_context('tc deploy') as c:
         c.argument('name', options_list=['--name', '-n'],
-                   help='Name of app. Must be globally unique and will be the subdomain for the TeamCloud instance service endpoint.')
+                   help='Name of app. Must be globally unique and will be the subdomain '
+                        'for the TeamCloud instance service endpoint.')
         c.argument('resource_group_name', resource_group_name_type,
                    default='TeamCloud')
         c.argument('principal_name', help='Service principal name, or object id.')
@@ -168,7 +172,9 @@ def load_arguments(self, _):
         c.argument('resource_group_name_prefix', type=str,
                    help='Prepended to all project resource group names.')
         c.argument('provider', nargs='+', action=CreateProviderReference,
-                   help='Project type provider: provider_id [key=value ...]. Use depends_on key to define dependencies. Use multiple --provider arguemnts to specify additional providers.')
+                   help='Project type provider: provider_id [key=value ...]. '
+                   'Use depends_on key to define dependencies. '
+                   'Use multiple --provider arguemnts to specify additional providers.')
         c.argument('tags', tags_type)
         c.argument('properties', properties_type)
         c.ignore('providers')

@@ -2,7 +2,7 @@
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # Licensed under the MIT License. See License.txt in the project root for license information.
 # --------------------------------------------------------------------------------------------
-# pylint: disable=unused-argument, protected-access, line-too-long, too-many-locals, import-outside-toplevel
+# pylint: disable=unused-argument, protected-access, too-many-lines
 
 from time import sleep
 from urllib.parse import urlparse
@@ -19,7 +19,9 @@ STATUS_POLLING_SLEEP_INTERVAL = 2
 
 # TeamCloud
 
-def teamcloud_deploy(cmd, client, name, location, resource_group_name='TeamCloud', principal_name=None, principal_password=None, tags=None, version=None, skip_app_deployment=False, skip_name_validation=False, skip_admin_user=False):  # pylint: disable=too-many-statements
+def teamcloud_deploy(cmd, client, name, location, resource_group_name='TeamCloud',  # pylint: disable=too-many-statements, too-many-locals
+                     principal_name=None, principal_password=None, tags=None, version=None,
+                     skip_app_deployment=False, skip_name_validation=False, skip_admin_user=False):
     from azure.cli.core._profile import Profile
     from .vendored_sdks.teamcloud.models import UserDefinition
 
@@ -43,19 +45,24 @@ def teamcloud_deploy(cmd, client, name, location, resource_group_name='TeamCloud
         name_short = name_short[:14]
 
     logger.warning('Creating app insights...')
-    appinsights = _try_create_application_insights(cli_ctx, name_short + 'appinsights', resource_group_name, location)
+    appinsights = _try_create_application_insights(
+        cli_ctx, name_short + 'appinsights', resource_group_name, location)
 
     logger.warning('Creating deployment storage account...')
-    dep_storage = _create_storage_account(cli_ctx, name_short + 'depstorage', resource_group_name, location, tags)
+    dep_storage = _create_storage_account(
+        cli_ctx, name_short + 'depstorage', resource_group_name, location, tags)
 
     logger.warning('Creating task hub storage account...')
-    th_storage = _create_storage_account(cli_ctx, name_short + 'thtorage', resource_group_name, location, tags)
+    th_storage = _create_storage_account(
+        cli_ctx, name_short + 'thtorage', resource_group_name, location, tags)
 
     logger.warning('Creating web jobs storage account...')
-    wj_storage = _create_storage_account(cli_ctx, name_short + 'wjstorage', resource_group_name, location, tags)
+    wj_storage = _create_storage_account(
+        cli_ctx, name_short + 'wjstorage', resource_group_name, location, tags)
 
     logger.warning('Creating cosmos db account. This may take several minutes to complete...')
-    cosmosdb = _create_cosmosdb_account(cli_ctx, name_short + 'database', resource_group_name, location, tags)
+    cosmosdb = _create_cosmosdb_account(
+        cli_ctx, name_short + 'database', resource_group_name, location, tags)
 
     profile = Profile(cli_ctx=cli_ctx)
 
@@ -63,7 +70,8 @@ def teamcloud_deploy(cmd, client, name, location, resource_group_name='TeamCloud
         logger.warning('Creating aad app registration...')
         resource_manager_sp = _create_resource_manager_sp(cmd)
     else:
-        _, _, tenant_id = profile.get_login_credentials(resource=cli_ctx.cloud.endpoints.active_directory_graph_resource_id)
+        _, _, tenant_id = profile.get_login_credentials(
+            resource=cli_ctx.cloud.endpoints.active_directory_graph_resource_id)
         resource_manager_sp = {
             'appId': principal_name,
             'password': principal_password,
@@ -74,35 +82,43 @@ def teamcloud_deploy(cmd, client, name, location, resource_group_name='TeamCloud
     appconfig = _create_appconfig(cli_ctx, name + '-config', resource_group_name, location, tags)
 
     logger.warning('Adding resource info to app configuration service...')
-    _set_appconfig_keys(cli_ctx, subscription_id, resource_manager_sp, appconfig, cosmosdb, dep_storage)
+    _set_appconfig_keys(cli_ctx, subscription_id, resource_manager_sp,
+                        appconfig, cosmosdb, dep_storage)
 
     logger.warning('Creating orchestrator function app...')
-    orchestrator, orchestrator_host_key = _create_function_app(cli_ctx, name + '-orchestrator', resource_group_name, location,
-                                                               wj_storage, th_storage, appconfig, appinsights, tags, with_identitiy=True)
+    orchestrator, orchestrator_host_key = _create_function_app(
+        cli_ctx, name + '-orchestrator', resource_group_name, location,
+        wj_storage, th_storage, appconfig, appinsights, tags, with_identitiy=True)
 
     logger.warning('Adding orchestrator info to app configuration service...')
-    _set_appconfig_orchestrator_keys(cli_ctx, subscription_id, appconfig, orchestrator, orchestrator_host_key)
+    _set_appconfig_orchestrator_keys(cli_ctx, subscription_id,
+                                     appconfig, orchestrator, orchestrator_host_key)
 
     logger.warning('Creating api app service...')
-    api_app = _create_api_app(cli_ctx, name, resource_group_name, location, appconfig, appinsights, tags)
+    api_app = _create_api_app(cli_ctx, name, resource_group_name,
+                              location, appconfig, appinsights, tags)
 
     logger.warning('Successfully deployed Azure resources for TeamCloud')
     base_url = 'https://{}'.format(api_app.default_host_name)
 
     if skip_app_deployment:
-        logger.warning('IMPORTANT: --skip-deploy prevented source code for the TeamCloud instance deployment. To deploy the applications use `az tc upgrade`.')
+        logger.warning(
+            'IMPORTANT: --skip-deploy prevented source code for the TeamCloud instance deployment. '
+            'To deploy the applications use `az tc upgrade`.')
     else:
         logger.warning('Deploying orchestrator source code...')
         _zip_deploy_app(cli_ctx, resource_group_name, name + '-orchestrator', 'https://github.com/microsoft/TeamCloud',
                         'TeamCloud.Orchestrator', version=version, app_instance=orchestrator)
 
         logger.warning('Deploying api app source code...')
-        _zip_deploy_app(cli_ctx, resource_group_name, name, 'https://github.com/microsoft/TeamCloud', 'TeamCloud.API', version=version, app_instance=api_app)
+        _zip_deploy_app(cli_ctx, resource_group_name, name, 'https://github.com/microsoft/TeamCloud',
+                        'TeamCloud.API', version=version, app_instance=api_app)
 
         logger.warning('Successfully created TeamCloud instance.')
 
     if skip_admin_user:
-        logger.warning('IMPORTANT: --redeploy prevented adding you as an Admin user to the TeamCloud instance deployment.')
+        logger.warning(
+            'IMPORTANT: --redeploy prevented adding you as an Admin user to the TeamCloud instance deployment.')
     else:
         logger.warning('Creating admin user...')
         me = profile.get_current_account_user()
@@ -111,8 +127,9 @@ def teamcloud_deploy(cmd, client, name, location, resource_group_name='TeamCloud
         user_definition = UserDefinition(email=me, role='Admin', tags=None)
         _ = client.create_team_cloud_admin_user(user_definition)
 
-    logger.warning(
-        'TeamCloud instance successfully created at: %s. Use `az configure --defaults tc-base-url=%s` to configure this as your default TeamCloud instance', base_url, base_url)
+    logger.warning('TeamCloud instance successfully created at: %s', base_url)
+    logger.warning('Use `az configure --defaults tc-base-url=%s` to configure '
+                   'this as your default TeamCloud instance', base_url)
 
     result = {
         'deployed': not skip_app_deployment,
@@ -145,7 +162,8 @@ def teamcloud_upgrade(cmd, client, base_url, resource_group_name='TeamCloud', ve
     rg, _ = _get_resource_group_by_name(cmd.cli_ctx, resource_group_name)
     if rg is None:
         logger.warning("Resource group '%s' not found.", resource_group_name)
-        raise CLIError("Resource group '{}' must exist in current subscription.".format(resource_group_name))
+        raise CLIError(
+            "Resource group '{}' must exist in current subscription.".format(resource_group_name))
 
     name = ''
     m = match(r'^https?://(?P<name>[a-zA-Z0-9-]+)\.azurewebsites\.net[/a-zA-Z0-9.\:]*$', base_url)
@@ -158,10 +176,12 @@ def teamcloud_upgrade(cmd, client, base_url, resource_group_name='TeamCloud', ve
         raise CLIError("Unable to get app name from base url.")
 
     logger.warning('Deploying orchestrator source code (version: %s)...', version)
-    _zip_deploy_app(cmd.cli_ctx, resource_group_name, name + '-orchestrator', 'https://github.com/microsoft/TeamCloud', 'TeamCloud.Orchestrator', version=version)
+    _zip_deploy_app(cmd.cli_ctx, resource_group_name, name + '-orchestrator',
+                    'https://github.com/microsoft/TeamCloud', 'TeamCloud.Orchestrator', version=version)
 
     logger.warning('Deploying api app source code (version: %s)...', version)
-    _zip_deploy_app(cmd.cli_ctx, resource_group_name, name, 'https://github.com/microsoft/TeamCloud', 'TeamCloud.API', version=version)
+    _zip_deploy_app(cmd.cli_ctx, resource_group_name, name,
+                    'https://github.com/microsoft/TeamCloud', 'TeamCloud.API', version=version)
 
     version_string = version or 'the latest version'
     logger.warning("TeamCloud instance '%s' was successfully upgraded to %s.", name, version_string)
@@ -190,12 +210,10 @@ def status_get(cmd, client, base_url, tracking_id, project=None):
 
 def teamcloud_user_create(cmd, client, base_url, user_name, user_role='Creator', tags=None):
     from .vendored_sdks.teamcloud.models import UserDefinition
-    user_definition = UserDefinition(
-        email=user_name, role=user_role, tags=tags)
-    return _create_with_status(cmd=cmd,
-                               client=client,
-                               base_url=base_url,
-                               payload=user_definition,
+
+    payload = UserDefinition(email=user_name, role=user_role, tags=tags)
+
+    return _create_with_status(cmd=cmd, client=client, base_url=base_url, payload=payload,
                                create_func=client.create_team_cloud_user)
 
 
@@ -217,10 +235,10 @@ def teamcloud_user_get(cmd, client, base_url, user):
 
 def teamcloud_tag_create(cmd, client, base_url, tag_key, tag_value):
     client._client.config.base_url = base_url
-    return _create_with_status(cmd=cmd,
-                               client=client,
-                               base_url=base_url,
-                               payload={tag_key, tag_value},
+
+    payload = {tag_key, tag_value}
+
+    return _create_with_status(cmd=cmd, client=client, base_url=base_url, payload=payload,
                                create_func=client.create_team_cloud_tag)
 
 
@@ -243,17 +261,14 @@ def teamcloud_tag_get(cmd, client, base_url, tag_key):
 
 def project_create(cmd, client, base_url, name, project_type=None, tags=None):
     from .vendored_sdks.teamcloud.models import ProjectDefinition
-    project_definition = ProjectDefinition(
-        name=name, project_type=project_type, tags=tags)
-    return _create_with_status(cmd=cmd,
-                               client=client,
-                               base_url=base_url,
-                               payload=project_definition,
+
+    payload = ProjectDefinition(name=name, project_type=project_type, tags=tags)
+
+    return _create_with_status(cmd=cmd, client=client, base_url=base_url, payload=payload,
                                create_func=client.create_project)
 
 
 def project_delete(cmd, client, base_url, project, no_wait=False):
-    # _delete_with_status(cmd, client, base_url, project, client.delete_project)
     return sdk_no_wait(no_wait, _delete_with_status, cmd, client, base_url, project, client.delete_project)
 
 
@@ -271,14 +286,11 @@ def project_get(cmd, client, base_url, project):
 
 def project_user_create(cmd, client, base_url, project, user_name, user_role='Member', tags=None):
     from .vendored_sdks.teamcloud.models import UserDefinition
-    user_definition = UserDefinition(
-        email=user_name, role=user_role, tags=tags)
-    return _create_with_status(cmd=cmd,
-                               client=client,
-                               base_url=base_url,
-                               payload=user_definition,
-                               create_func=client.create_project_user,
-                               project_id=project)
+
+    payload = UserDefinition(email=user_name, role=user_role, tags=tags)
+
+    return _create_with_status(cmd=cmd, client=client, base_url=base_url, payload=payload,
+                               create_func=client.create_project_user, project_id=project)
 
 
 def project_user_delete(cmd, client, base_url, project, user):
@@ -299,12 +311,11 @@ def project_user_get(cmd, client, base_url, project, user):
 
 def project_tag_create(cmd, client, base_url, project, tag_key, tag_value):
     client._client.config.base_url = base_url
-    return _create_with_status(cmd=cmd,
-                               client=client,
-                               base_url=base_url,
-                               payload={tag_key, tag_value},
-                               create_func=client.create_project_tag,
-                               project_id=project)
+
+    payload = {tag_key, tag_value}
+
+    return _create_with_status(cmd=cmd, client=client, base_url=base_url, payload=payload,
+                               create_func=client.create_project_tag, project_id=project)
 
 
 def project_tag_delete(cmd, client, base_url, project, tag_key):
@@ -324,20 +335,18 @@ def project_tag_get(cmd, client, base_url, project, tag_key):
 
 # Project Types
 
-def project_type_create(cmd, client, base_url, project_type, subscriptions, provider, providers, location=None, subscription_capacity=10, resource_group_name_prefix=None, tags=None, properties=None, default=False):
+def project_type_create(cmd, client, base_url, project_type, subscriptions, provider, providers,
+                        location=None, subscription_capacity=10, resource_group_name_prefix=None,
+                        tags=None, properties=None, default=False):
     from .vendored_sdks.teamcloud.models import ProjectType
     client._client.config.base_url = base_url
-    proj_type = ProjectType(
-        id=project_type,
-        default=default,
-        region=location,
-        subscriptions=subscriptions,
-        subscription_capacity=subscription_capacity,
-        resource_group_name_prefix=resource_group_name_prefix,
-        providers=providers,
-        tags=tags,
-        properties=properties)
-    return client.create_project_type(proj_type)
+
+    payload = ProjectType(id=project_type, default=default, region=location,
+                          subscriptions=subscriptions, subscription_capacity=subscription_capacity,
+                          resource_group_name_prefix=resource_group_name_prefix, providers=providers,
+                          tags=tags, properties=properties)
+
+    return client.create_project_type(payload)
 
 
 def project_type_delete(cmd, client, base_url, project_type):
@@ -360,19 +369,11 @@ def project_type_get(cmd, client, base_url, project_type):
 def provider_create(cmd, client, base_url, provider, url, auth_code, events=None, properties=None):
     from .vendored_sdks.teamcloud.models import Provider
 
-    payload = Provider(
-        id=provider,
-        url=url,
-        auth_code=auth_code,
-        events=events,
-        properties=properties,
-    )
+    payload = Provider(id=provider, url=url, auth_code=auth_code,
+                       events=events, properties=properties)
 
-    return _create_with_status(cmd=cmd,
-                               client=client,
-                               base_url=base_url,
-                               payload=payload,
-                               create_func=client.create_provider)
+    return _create_with_status(cmd=cmd, client=client, base_url=base_url,
+                               payload=payload, create_func=client.create_provider)
 
 
 def provider_delete(cmd, client, base_url, provider):
@@ -389,7 +390,8 @@ def provider_get(cmd, client, base_url, provider):
     return client.get_provider_by_id(provider)
 
 
-def provider_deploy(cmd, client, base_url, provider, location, resource_group_name='TeamCloud-Providers', events=None, properties=None, version=None, tags=None):
+def provider_deploy(cmd, client, base_url, provider, location, resource_group_name='TeamCloud-Providers',
+                    events=None, properties=None, version=None, tags=None):
     from azure.cli.core.util import random_string
     client._client.config.base_url = base_url
     cli_ctx = cmd.cli_ctx
@@ -403,7 +405,8 @@ def provider_deploy(cmd, client, base_url, provider, location, resource_group_na
         zip_name = 'TeamCloud.Providers.Azure.DevTestLabs'
 
     if zip_name is None:
-        raise CLIError("--provider is invalid.  Must be one of 'azure.appinsights', 'azure.devops', 'azure.devtestlabs'")
+        raise CLIError(
+            "--provider is invalid.  Must be one of 'azure.appinsights', 'azure.devops', 'azure.devtestlabs'")
 
     logger.warning("Getting resource group '%s'...", resource_group_name)
     rg, _ = _get_resource_group_by_name(cli_ctx, resource_group_name)
@@ -421,12 +424,14 @@ def provider_deploy(cmd, client, base_url, provider, location, resource_group_na
     wj_storage = _create_storage_account(cli_ctx, name + 'wjstorage', resource_group_name, location)
 
     logger.warning('Creating provider function app...')
-    functionapp, host_key = _create_function_app(cli_ctx, name, resource_group_name, location, wj_storage, th_storage, tags=tags, with_identitiy=True)
+    functionapp, host_key = _create_function_app(
+        cli_ctx, name, resource_group_name, location, wj_storage, th_storage, tags=tags, with_identitiy=True)
 
     url = 'https://{}'.format(functionapp.default_host_name)
 
     logger.warning('Deploying provider source code (version: %s)...', version)
-    _zip_deploy_app(cli_ctx, resource_group_name, name, 'https://github.com/microsoft/TeamCloud-Providers', zip_name, version=version, app_instance=functionapp)
+    _zip_deploy_app(cli_ctx, resource_group_name, name, 'https://github.com/microsoft/TeamCloud-Providers',
+                    zip_name, version=version, app_instance=functionapp)
 
     return provider_create(cmd, client, base_url, provider, url, host_key, events, properties)
 
@@ -445,13 +450,15 @@ def provider_upgrade(cmd, client, base_url, provider, resource_group_name='TeamC
         zip_name = 'TeamCloud.Providers.Azure.DevTestLabs'
 
     if zip_name is None:
-        raise CLIError("--provider is invalid.  Must be one of 'azure.appinsights', 'azure.devops', 'azure.devtestlabs'")
+        raise CLIError(
+            "--provider is invalid.  Must be one of 'azure.appinsights', 'azure.devops', 'azure.devtestlabs'")
 
     logger.warning("Getting resource group '%s'...", resource_group_name)
     rg, _ = _get_resource_group_by_name(cli_ctx, resource_group_name)
     if rg is None:
         logger.warning("Resource group '%s' not found.", resource_group_name)
-        raise CLIError("Resource group '{}' must exist in current subscription.".format(resource_group_name))
+        raise CLIError(
+            "Resource group '{}' must exist in current subscription.".format(resource_group_name))
 
     provider_result = client.get_provider_by_id(provider)
 
@@ -465,10 +472,11 @@ def provider_upgrade(cmd, client, base_url, provider, resource_group_name='TeamC
         pass
 
     if name is None or '':
-        raise CLIError("Unable to function app name from provider url.")
+        raise CLIError('Unable to function app name from provider url.')
 
     logger.warning('Deploying provider source code (version: %s)...', version)
-    _zip_deploy_app(cli_ctx, resource_group_name, name, 'https://github.com/microsoft/TeamCloud-Providers', zip_name, version=version)
+    _zip_deploy_app(cli_ctx, resource_group_name, name,
+                    'https://github.com/microsoft/TeamCloud-Providers', zip_name, version=version)
 
     version_string = version or 'the latest version'
     logger.warning("Provider '%s' was successfully upgraded to %s.", name, version_string)
@@ -563,6 +571,7 @@ def _delete_with_status(cmd, client, base_url, item_id, delete_func, project_id=
 
 def _get_resource_group_by_name(cli_ctx, resource_group_name):
     from ._client_factory import resource_client_factory
+
     try:
         resouce_client = resource_client_factory(cli_ctx).resource_groups
         return resouce_client.get(resource_group_name), resouce_client.config.subscription_id
@@ -575,8 +584,9 @@ def _get_resource_group_by_name(cli_ctx, resource_group_name):
 
 def _create_resource_group_name(cli_ctx, resource_group_name, location, tags=None):
     from ._client_factory import resource_client_factory
-    ResourceGroup = get_sdk(
-        cli_ctx, ResourceType.MGMT_RESOURCE_RESOURCES, 'ResourceGroup', mod='models')
+
+    ResourceGroup = get_sdk(cli_ctx, ResourceType.MGMT_RESOURCE_RESOURCES,
+                            'ResourceGroup', mod='models')
     resource_client = resource_client_factory(cli_ctx).resource_groups
     parameters = ResourceGroup(location=location, tags=tags)
     resource_client.create_or_update(resource_group_name, parameters)
@@ -585,10 +595,9 @@ def _create_resource_group_name(cli_ctx, resource_group_name, location, tags=Non
 def _create_storage_account(cli_ctx, name, resource_group_name, location, tags=None):
     from ._client_factory import storage_client_factory
     from azure.mgmt.storage.models import Sku, SkuName, StorageAccountCreateParameters
+
     params = StorageAccountCreateParameters(sku=Sku(name=SkuName.standard_ragrs),
-                                            kind='StorageV2',
-                                            location=location,
-                                            tags=tags)
+                                            kind='StorageV2', location=location, tags=tags)
 
     storage_client = storage_client_factory(cli_ctx).storage_accounts
     LongRunningOperation(cli_ctx)(storage_client.create(resource_group_name, name, params))
@@ -598,10 +607,7 @@ def _create_storage_account(cli_ctx, name, resource_group_name, location, tags=N
 
     endpoint_suffix = cli_ctx.cloud.suffixes.storage_endpoint
     connection_string = 'DefaultEndpointsProtocol={};EndpointSuffix={};AccountName={};AccountKey={}'.format(
-        "https",
-        endpoint_suffix,
-        name,
-        keys.keys[0].value)  # pylint: disable=no-member
+        "https", endpoint_suffix, name, keys.keys[0].value)  # pylint: disable=no-member
 
     return properties, keys, connection_string
 
@@ -609,13 +615,11 @@ def _create_storage_account(cli_ctx, name, resource_group_name, location, tags=N
 def _create_cosmosdb_account(cli_ctx, name, resource_group_name, location, tags=None):
     from ._client_factory import cosmosdb_client_factory
     from azure.mgmt.cosmosdb.models import DatabaseAccountKind, Location, DatabaseAccountCreateUpdateParameters
+
     locations = []
     locations.append(Location(location_name=location, failover_priority=0, is_zone_redundant=False))
     params = DatabaseAccountCreateUpdateParameters(
-        location=location,
-        locations=locations,
-        tags=tags,
-        kind=DatabaseAccountKind.global_document_db.value)
+        location=location, locations=locations, tags=tags, kind=DatabaseAccountKind.global_document_db.value)
 
     cosmos_client = cosmosdb_client_factory(cli_ctx).database_accounts
 
@@ -631,10 +635,9 @@ def _create_cosmosdb_account(cli_ctx, name, resource_group_name, location, tags=
 def _create_appconfig(cli_ctx, name, resource_group_name, location, tags=None):
     from ._client_factory import appconfig_client_factory
     from azure.mgmt.appconfiguration.models import ConfigurationStore, Sku
-    params = ConfigurationStore(location=location.lower(),
-                                identity=None,
-                                sku=Sku(name='Standard'),
-                                tags=tags)
+
+    params = ConfigurationStore(location=location.lower(), identity=None,
+                                sku=Sku(name='Standard'), tags=tags)
 
     appconfig_client = appconfig_client_factory(cli_ctx).configuration_stores
 
@@ -660,19 +663,12 @@ def _set_appconfig_keys(cli_ctx, subscription_id, resource_manager_sp, appconfig
 
     set_kvs.append(KeyValue(key='Azure:SubscriptionId', value=subscription_id))
     set_kvs.append(KeyValue(key='Azure:TenantId', value=tenant_id))
-
-    # set_kvs.append(KeyValue(key='Azure:ActiveDirectory:ClientId', value=resource_manager_sp['appId']))
-    # set_kvs.append(KeyValue(key='Azure:ActiveDirectory:Domain', value=''))
-    # set_kvs.append(KeyValue(key='Azure:ActiveDirectory:Instance', value=''))
-    # set_kvs.append(KeyValue(key='Azure:ActiveDirectory:TenantId', value=tenant_id))
-
-    set_kvs.append(KeyValue(key='Azure:ResourceManager:ClientId', value=resource_manager_sp['appId']))
-    set_kvs.append(KeyValue(key='Azure:ResourceManager:ClientSecret', value=resource_manager_sp['password']))
-    # set_kvs.append(KeyValue(key='Azure:ResourceManager:Region', value=location.lower()))
+    set_kvs.append(KeyValue(key='Azure:ResourceManager:ClientId',
+                            value=resource_manager_sp['appId']))
+    set_kvs.append(KeyValue(key='Azure:ResourceManager:ClientSecret',
+                            value=resource_manager_sp['password']))
     set_kvs.append(KeyValue(key='Azure:ResourceManager:TenantId', value=tenant_id))
-
     set_kvs.append(KeyValue(key='Azure:CosmosDb:ConnectionString', value=cosmosdb[1]))
-
     set_kvs.append(KeyValue(key='Azure:DeploymentStorage:ConnectionString', value=dep_storage[2]))
 
     for set_kv in set_kvs:
@@ -686,8 +682,8 @@ def _set_appconfig_orchestrator_keys(cli_ctx, subscription_id, appconfig, orches
     azconfig_client = AzconfigClient(appconfig[2])
 
     set_kvs = []
-
-    set_kvs.append(KeyValue(key='Orchestrator:Url', value='https://{}'.format(orchestrator.default_host_name)))
+    set_kvs.append(KeyValue(key='Orchestrator:Url',
+                            value='https://{}'.format(orchestrator.default_host_name)))
     set_kvs.append(KeyValue(key='Orchestrator:AuthCode', value=orchestrator_host_key))
 
     for set_kv in set_kvs:
@@ -696,8 +692,10 @@ def _set_appconfig_orchestrator_keys(cli_ctx, subscription_id, appconfig, orches
 
 def _create_api_app(cli_ctx, name, resource_group_name, location, appconfig, app_insights, tags=None):
     from ._client_factory import web_client_factory
+
     SkuDescription, AppServicePlan, SiteConfig, Site, NameValuePair, ConnStringInfo = get_sdk(
-        cli_ctx, ResourceType.MGMT_APPSERVICE, 'SkuDescription', 'AppServicePlan', 'SiteConfig', 'Site', 'NameValuePair', 'ConnStringInfo', mod='models')
+        cli_ctx, ResourceType.MGMT_APPSERVICE, 'SkuDescription', 'AppServicePlan', 'SiteConfig',
+        'Site', 'NameValuePair', 'ConnStringInfo', mod='models')
 
     web_client = web_client_factory(cli_ctx)
 
@@ -706,22 +704,29 @@ def _create_api_app(cli_ctx, name, resource_group_name, location, appconfig, app
                               reserved=None, hyper_v=None, name=name,
                               per_site_scaling=False, hosting_environment_profile=None)
 
-    app_service_poller = web_client.app_service_plans.create_or_update(name=name, resource_group_name=resource_group_name, app_service_plan=plan_def)
+    app_service_poller = web_client.app_service_plans.create_or_update(
+        name=name, resource_group_name=resource_group_name, app_service_plan=plan_def)
     app_service = LongRunningOperation(cli_ctx)(app_service_poller)
 
     site_config = SiteConfig(app_settings=[], connection_strings=[])
     site_config.always_on = True
 
-    site_config.connection_strings.append(ConnStringInfo(name='ConfigurationService', connection_string=appconfig[2]))
+    site_config.connection_strings.append(ConnStringInfo(
+        name='ConfigurationService', connection_string=appconfig[2]))
 
-    site_config.app_settings.append(NameValuePair(name="WEBSITE_NODE_DEFAULT_VERSION", value='10.14'))
-    site_config.app_settings.append(NameValuePair(name='ANCM_ADDITIONAL_ERROR_PAGE_LINK', value='https://{}.scm.azurewebsites.net/detectors'.format(name)))
-    site_config.app_settings.append(NameValuePair(name='ApplicationInsightsAgent_EXTENSION_VERSION', value='~2'))
+    site_config.app_settings.append(NameValuePair(name="WEBSITE_NODE_DEFAULT_VERSION",
+                                                  value='10.14'))
+    site_config.app_settings.append(NameValuePair(name='ANCM_ADDITIONAL_ERROR_PAGE_LINK',
+                                                  value='https://{}.scm.azurewebsites.net/detectors'.format(name)))
+    site_config.app_settings.append(NameValuePair(name='ApplicationInsightsAgent_EXTENSION_VERSION',
+                                                  value='~2'))
 
     if app_insights is not None and app_insights.instrumentation_key is not None:
-        site_config.app_settings.append(NameValuePair(name='APPINSIGHTS_INSTRUMENTATIONKEY', value=app_insights.instrumentation_key))
+        site_config.app_settings.append(NameValuePair(name='APPINSIGHTS_INSTRUMENTATIONKEY',
+                                                      value=app_insights.instrumentation_key))
 
-    webapp_def = Site(location=location, site_config=site_config, server_farm_id=app_service.id, tags=tags)
+    webapp_def = Site(location=location, site_config=site_config,
+                      server_farm_id=app_service.id, tags=tags)
 
     poller = web_client.web_apps.create_or_update(resource_group_name, name, webapp_def)
     webapp = LongRunningOperation(cli_ctx)(poller)
@@ -729,11 +734,14 @@ def _create_api_app(cli_ctx, name, resource_group_name, location, appconfig, app
     return webapp
 
 
-def _create_function_app(cli_ctx, name, resource_group_name, location, wj_storage, th_storage, appconfig=None, app_insights=None, tags=None, with_identitiy=False):
+def _create_function_app(cli_ctx, name, resource_group_name, location, wj_storage, th_storage,  # pylint: disable=too-many-locals
+                         appconfig=None, app_insights=None, tags=None, with_identitiy=False):
     from ._client_factory import web_client_factory
     from azure.cli.core.util import send_raw_request
+
     SiteConfig, Site, NameValuePair, ConnStringInfo, ManagedServiceIdentity = get_sdk(
-        cli_ctx, ResourceType.MGMT_APPSERVICE, 'SiteConfig', 'Site', 'NameValuePair', 'ConnStringInfo', 'ManagedServiceIdentity', mod='models')
+        cli_ctx, ResourceType.MGMT_APPSERVICE, 'SiteConfig', 'Site', 'NameValuePair', 'ConnStringInfo',
+        'ManagedServiceIdentity', mod='models')
 
     web_client = web_client_factory(cli_ctx)
 
@@ -744,23 +752,26 @@ def _create_function_app(cli_ctx, name, resource_group_name, location, wj_storag
 
     deploy_location = next((l for l in locations if l['name'].lower() == location.lower()), None)
     if deploy_location is None:
-        raise CLIError(
-            "Location is invalid. Use: az functionapp list-consumption-locations")
+        raise CLIError('Location is invalid. Use: az functionapp list-consumption-locations')
 
     if appconfig is not None:
-        site_config.connection_strings.append(ConnStringInfo(name='ConfigurationService', connection_string=appconfig[2]))
+        site_config.connection_strings.append(ConnStringInfo(name='ConfigurationService',
+                                                             connection_string=appconfig[2]))
 
     # adding appsetting to site to make it a function
     site_config.app_settings.append(NameValuePair(name='FUNCTIONS_EXTENSION_VERSION', value='~3'))
     site_config.app_settings.append(NameValuePair(name='AzureWebJobsStorage', value=wj_storage[2]))
-    site_config.app_settings.append(NameValuePair(name='DurableFunctionsHubStorage', value=th_storage[2]))
+    site_config.app_settings.append(NameValuePair(name='DurableFunctionsHubStorage',
+                                                  value=th_storage[2]))
     site_config.app_settings.append(NameValuePair(name='WEBSITE_NODE_DEFAULT_VERSION', value='~12'))
-    site_config.app_settings.append(NameValuePair(name='WEBSITE_CONTENTAZUREFILECONNECTIONSTRING', value=wj_storage[2]))
+    site_config.app_settings.append(NameValuePair(name='WEBSITE_CONTENTAZUREFILECONNECTIONSTRING',
+                                                  value=wj_storage[2]))
     site_config.app_settings.append(NameValuePair(name='WEBSITE_CONTENTSHARE', value=name.lower()))
     site_config.app_settings.append(NameValuePair(name='FUNCTION_APP_EDIT_MODE', value='readonly'))
 
     if app_insights is not None and app_insights.instrumentation_key is not None:
-        site_config.app_settings.append(NameValuePair(name='APPINSIGHTS_INSTRUMENTATIONKEY', value=app_insights.instrumentation_key))
+        site_config.app_settings.append(NameValuePair(name='APPINSIGHTS_INSTRUMENTATIONKEY',
+                                                      value=app_insights.instrumentation_key))
 
     functionapp_def = Site(location=None, site_config=site_config, tags=tags)
     functionapp_def.location = location
@@ -787,7 +798,8 @@ def _create_function_app(cli_ctx, name, resource_group_name, location, wj_storag
     host_key_url = 'https://{}/admin/host/keys/default'.format(functionapp.default_host_name)
     host_key_auth_header = 'Authorization=Bearer {}'.format(admin_token)
 
-    host_key_response = send_raw_request(cli_ctx, 'GET', host_key_url, [host_key_auth_header], skip_authorization_header=True)
+    host_key_response = send_raw_request(cli_ctx, 'GET', host_key_url, [host_key_auth_header],
+                                         skip_authorization_header=True)
     host_key_json = host_key_response.json()
     host_key = host_key_json['value']
 
@@ -797,9 +809,10 @@ def _create_function_app(cli_ctx, name, resource_group_name, location, wj_storag
 def _try_create_application_insights(cli_ctx, name, resource_group_name, location):
     from azure.cli.core.commands.client_factory import get_mgmt_service_client
     from azure.mgmt.applicationinsights import ApplicationInsightsManagementClient
-    creation_failed_warn = 'Unable to create the Application Insights for the Function App. ' \
-                           'Please use the Azure Portal to manually create and configure the Application Insights, ' \
-                           'if needed.'
+
+    creation_failed_warn = 'Unable to create the Application Insights for the TeamCloud instance. ' \
+                           'Please use the Azure Portal to manually create and configure the ' \
+                           'Application Insights, if needed.'
 
     app_insights_client = get_mgmt_service_client(cli_ctx, ApplicationInsightsManagementClient)
     properties = {
@@ -811,16 +824,17 @@ def _try_create_application_insights(cli_ctx, name, resource_group_name, locatio
         }
     }
 
-    appinsights = app_insights_client.components.create_or_update(resource_group_name, name, properties)
+    appinsights = app_insights_client.components.create_or_update(resource_group_name,
+                                                                  name, properties)
 
     if appinsights is None or appinsights.instrumentation_key is None:
         logger.warning(creation_failed_warn)
         return None
 
     # We make this success message as a warning to no interfere with regular JSON output in stdout
-    logger.warning('Application Insights \"%s\" was created for this TeamCloud instance. '
-                   'You can visit https://portal.azure.com/#resource%s/overview to view your '
-                   'Application Insights component', appinsights.name, appinsights.id)
+    logger.warning('Application Insights \"%s\" was created.', appinsights.name)
+    logger.warning('View the Application Insights component at '
+                   'https://portal.azure.com/#resource%s/overview', appinsights.id)
 
     return appinsights
 
@@ -832,14 +846,16 @@ def _create_keyvault(cli_ctx, name, resource_group_name, location):
 def _create_resource_manager_sp(cmd):
     from azure.cli.command_modules.role.custom import create_service_principal_for_rbac, add_permission, admin_consent
 
-    sp = create_service_principal_for_rbac(cmd, name='http://TeamCloud.ResourceManager', years=10, role='Owner')
+    sp = create_service_principal_for_rbac(
+        cmd, name='http://TeamCloud.ResourceManager', years=10, role='Owner')
 
-    add_permission(cmd, identifier=sp['appId'], api='00000002-0000-0000-c000-000000000000', api_permissions=['5778995a-e1bf-45b8-affa-663a9f3f4d04=Role'])
+    add_permission(cmd, identifier=sp['appId'], api='00000002-0000-0000-c000-000000000000',
+                   api_permissions=['5778995a-e1bf-45b8-affa-663a9f3f4d04=Role'])
 
-    add_permission(cmd, identifier=sp['appId'], api='00000003-0000-0000-c000-000000000000', api_permissions=[
-        'e1fe6dd8-ba31-4d61-89e7-88639da4683d=Scope',
-        '7ab1d382-f21e-4acd-a863-ba3e13f7da61=Role',
-        'df021288-bdef-4463-88db-98f22de89214=Role'])
+    add_permission(cmd, identifier=sp['appId'], api='00000003-0000-0000-c000-000000000000',
+                   api_permissions=['e1fe6dd8-ba31-4d61-89e7-88639da4683d=Scope',
+                                    '7ab1d382-f21e-4acd-a863-ba3e13f7da61=Role',
+                                    'df021288-bdef-4463-88db-98f22de89214=Role'])
 
     admin_consent(cmd, identifier=sp['appId'])
 
@@ -858,7 +874,8 @@ def _deploy_app(cli_ctx, resource_group_name, name, location, repo_url, slot=Non
     # SCC config can fail if previous commands caused SCMSite shutdown, so retry here.
     for i in range(5):
         try:
-            poller = web_client.create_or_update_source_control(resource_group_name, name, source_control)
+            poller = web_client.create_or_update_source_control(
+                resource_group_name, name, source_control)
 
             return LongRunningOperation(cli_ctx)(poller)
         except Exception as ex:  # pylint: disable=broad-except
@@ -870,7 +887,8 @@ def _deploy_app(cli_ctx, resource_group_name, name, location, repo_url, slot=Non
             sleep(5)   # retry in a moment
 
 
-def _zip_deploy_app(cli_ctx, resource_group_name, name, repo_url, zip_name, version=None, slot=None, app_instance=None, timeout=None):
+def _zip_deploy_app(cli_ctx, resource_group_name, name, repo_url, zip_name, version=None, slot=None,
+                    app_instance=None, timeout=None):
     import requests
     import urllib3
 
@@ -884,72 +902,88 @@ def _zip_deploy_app(cli_ctx, resource_group_name, name, repo_url, zip_name, vers
     creds = creds.result()
 
     try:
-        scm_url = _get_scm_url(cli_ctx, resource_group_name, name, slot=slot, app_instance=app_instance)
+        scm_url = _get_scm_url(cli_ctx, resource_group_name, name,
+                               slot=slot, app_instance=app_instance)
     except ValueError:
         raise CLIError('Failed to fetch scm url for azure app service app')
 
     zipdeploy_url = scm_url + '/api/zipdeploy?isAsync=true'
     deployment_status_url = scm_url + '/api/deployments/latest'
 
-    authorization = urllib3.util.make_headers(basic_auth='{}:{}'.format(creds.publishing_user_name, creds.publishing_password))
+    authorization = urllib3.util.make_headers(basic_auth='{}:{}'.format(
+        creds.publishing_user_name, creds.publishing_password))
 
     zip_package_uri = '{}/releases/latest/download/{}.zip'.format(repo_url, zip_name)
     if version:
         zip_package_uri = '{}/releases/download/{}/{}.zip'.format(repo_url, version, zip_name)
 
-    logger.warning("Starting zip deployment. This may take several minutes to complete...")
-    res = requests.put(zipdeploy_url, headers=authorization, json={'packageUri': zip_package_uri}, verify=not should_disable_connection_verify())
+    logger.warning('Starting zip deployment. This may take several minutes to complete...')
+    res = requests.put(zipdeploy_url, headers=authorization,
+                       json={'packageUri': zip_package_uri}, verify=not should_disable_connection_verify())
 
     # check if there's an ongoing process
     if res.status_code == 409:
-        raise CLIError("There may be an ongoing deployment or your app setting has WEBSITE_RUN_FROM_PACKAGE. "
-                       "Please track your deployment in {} and ensure the WEBSITE_RUN_FROM_PACKAGE app setting "
-                       "is removed.".format(deployment_status_url))
+        raise CLIError('There may be an ongoing deployment or your app setting has WEBSITE_RUN_FROM_PACKAGE. '
+                       'Please track your deployment in {} and ensure the WEBSITE_RUN_FROM_PACKAGE app setting '
+                       'is removed.'.format(deployment_status_url))
 
     # check the status of async deployment
-    response = _check_zip_deployment_status(cli_ctx, resource_group_name, name, deployment_status_url, authorization, slot=slot, app_instance=app_instance, timeout=timeout)
+    response = _check_zip_deployment_status(cli_ctx, resource_group_name, name, deployment_status_url,
+                                            authorization, slot=slot, app_instance=app_instance, timeout=timeout)
 
     return response
 
 
-def _check_zip_deployment_status(cli_ctx, resource_group_name, name, deployment_status_url, authorization, slot=None, app_instance=None, timeout=None):
+def _check_zip_deployment_status(cli_ctx, resource_group_name, name, deployment_status_url,
+                                 authorization, slot=None, app_instance=None, timeout=None):
     import json
     import requests
     from azure.cli.core.util import should_disable_connection_verify
+
     total_trials = (int(timeout) // 2) if timeout else 450
     num_trials = 0
+
     while num_trials < total_trials:
         sleep(2)
-        response = requests.get(deployment_status_url, headers=authorization, verify=not should_disable_connection_verify())
+        response = requests.get(deployment_status_url, headers=authorization,
+                                verify=not should_disable_connection_verify())
         sleep(2)
         try:
             res_dict = response.json()
         except json.decoder.JSONDecodeError:
-            logger.warning("Deployment status endpoint %s returned malformed data. Retrying...", deployment_status_url)
+            logger.warning("Deployment status endpoint %s returned malformed data. Retrying...",
+                           deployment_status_url)
             res_dict = {}
         finally:
             num_trials = num_trials + 1
 
         if res_dict.get('status', 0) == 3:
-            _configure_default_logging(cli_ctx, resource_group_name, name, slot=slot, app_instance=app_instance)
-            raise CLIError("Zip deployment failed. {}. Please run the command az webapp log tail -n {} -g {}".format(res_dict, name, resource_group_name))
+            _configure_default_logging(cli_ctx, resource_group_name, name,
+                                       slot=slot, app_instance=app_instance)
+            raise CLIError('Zip deployment failed. {}. Please run the command az webapp log tail -n {} -g {}'.format(
+                res_dict, name, resource_group_name))
         if res_dict.get('status', 0) == 4:
             break
         if 'progress' in res_dict:
-            logger.info(res_dict['progress'])  # show only in debug mode, customers seem to find this confusing
+            # show only in debug mode, customers seem to find this confusing
+            logger.info(res_dict['progress'])
     # if the deployment is taking longer than expected
     if res_dict.get('status', 0) != 4:
-        _configure_default_logging(cli_ctx, resource_group_name, name, slot=slot, app_instance=app_instance)
-        raise CLIError("Timeout reached by the command, however, the deployment operation is still on-going. Navigate to your scm site to check the deployment status")
+        _configure_default_logging(cli_ctx, resource_group_name, name,
+                                   slot=slot, app_instance=app_instance)
+        raise CLIError(
+            'Timeout reached by the command, however, the deployment operation is still on-going. '
+            'Navigate to your scm site to check the deployment status')
     return res_dict
 
 
 # TODO: expose new blob suport
 def _configure_default_logging(cli_ctx, resource_group_name, name, slot=None, app_instance=None, level=None,
                                web_server_logging='filesystem', docker_container_logging='true'):
-    logger.warning("Configuring default logging for the app, if not already enabled...")
     from azure.mgmt.web.models import (FileSystemApplicationLogsConfig, ApplicationLogsConfig,
                                        SiteLogsConfig, HttpLogsConfig, FileSystemHttpLogsConfig)
+
+    logger.warning('Configuring default logging for the app, if not already enabled...')
 
     site = _get_webapp(cli_ctx, resource_group_name, name, slot=slot, app_instance=app_instance)
 
@@ -967,14 +1001,13 @@ def _configure_default_logging(cli_ctx, resource_group_name, name, slot=None, ap
         turned_on = server_logging_option != 'off'
         if server_logging_option in ['filesystem', 'off']:
             # 100 mb max log size, retention lasts 3 days. Yes we hard code it, portal does too
-            filesystem_log_config = FileSystemHttpLogsConfig(retention_in_mb=100, retention_in_days=3, enabled=turned_on)
+            filesystem_log_config = FileSystemHttpLogsConfig(
+                retention_in_mb=100, retention_in_days=3, enabled=turned_on)
 
         http_logs = HttpLogsConfig(file_system=filesystem_log_config, azure_blob_storage=None)
 
-    site_log_config = SiteLogsConfig(location=location,
-                                     application_logs=application_logs,
-                                     http_logs=http_logs,
-                                     failed_requests_tracing=None,
+    site_log_config = SiteLogsConfig(location=location, application_logs=application_logs,
+                                     http_logs=http_logs, failed_requests_tracing=None,
                                      detailed_error_messages=None)
 
     from ._client_factory import web_client_factory
@@ -983,12 +1016,13 @@ def _configure_default_logging(cli_ctx, resource_group_name, name, slot=None, ap
     return web_client.update_diagnostic_logs_config(resource_group_name, name, site_log_config)
 
 
-def _get_scm_url(cli_ctx, resource_group_name, name, slot=None, app_instance=None):
+def _get_scm_url(cli_ctx, resource_group_name, name, slot=None, app_instance=None):  # pylint: disable=inconsistent-return-statements
     from azure.mgmt.web.models import HostType
+
     webapp = _get_webapp(cli_ctx, resource_group_name, name, slot=slot, app_instance=app_instance)
     for host in webapp.host_name_ssl_states or []:
         if host.host_type == HostType.repository:
-            return "https://{}".format(host.name)
+            return 'https://{}'.format(host.name)
 
 
 def _get_webapp(cli_ctx, resource_group_name, name, slot=None, app_instance=None):

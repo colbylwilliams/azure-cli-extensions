@@ -64,4 +64,3 @@ class TeamCloudScenarioTest(ScenarioTest):
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0]['id'], provider)
         self.assertIsNotNone(result[0]['url'])
-

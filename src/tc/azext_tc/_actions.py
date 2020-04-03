@@ -2,7 +2,7 @@
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # Licensed under the MIT License. See License.txt in the project root for license information.
 # --------------------------------------------------------------------------------------------
-# pylint: disable=protected-access, too-few-public-methods, line-too-long
+# pylint: disable=protected-access, too-few-public-methods
 
 import argparse
 from re import match
@@ -25,9 +25,12 @@ class CreateProviderReference(argparse._AppendAction):
         try:
             provider_id = values.pop(0)
 
-            if 4 > len(provider_id) > 255 or match(r'^(?:[a-z][a-z0-9]+(?:\.[a-z0-9]+)+)$', provider_id) is None:
+            if 4 > len(provider_id) > 255 or match(
+                    r'^(?:[a-z][a-z0-9]+(?:\.[a-z0-9]+)+)$', provider_id) is None:
                 raise CLIError(
-                    'usage error: {} PROVIDER_ID [KEY=VALUE ...] PROVIDER_ID should start with a lowercase and contain only lowercase, numbers, and periods [.] with length [4,254]'.format(option_string or '--provider'))
+                    'usage error: {} PROVIDER_ID [KEY=VALUE ...] PROVIDER_ID should start with '
+                    'a lowercase and contain only lowercase, numbers, and periods [.] '
+                    'with length [4,254]'.format(option_string or '--provider'))
 
             provider_depends_on = []
             provider_properties = {}
@@ -39,7 +42,9 @@ class CreateProviderReference(argparse._AppendAction):
                 else:
                     provider_properties[key] = value
 
-            namespace.providers.append(ProviderReference(id=provider_id, properties=provider_properties, depends_on=provider_depends_on))
+            namespace.providers.append(ProviderReference(
+                id=provider_id, properties=provider_properties, depends_on=provider_depends_on))
 
         except (IndexError, ValueError):
-            raise CLIError('usage error: {} PROVIDER_ID [KEY=VALUE ...]'.format(option_string or '--provider'))
+            raise CLIError('usage error: {} PROVIDER_ID [KEY=VALUE ...]'.format(
+                option_string or '--provider'))
