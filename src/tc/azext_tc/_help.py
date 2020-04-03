@@ -20,9 +20,9 @@ type: command
 short-summary: Deploy a new TeamCloud instance.
 examples:
   - name: Deploy a new TeamCloud instance.
-    text: az tc provider deploy --name myawesomeapp
+    text: az tc deploy --name myawesomeapp
   - name: Deploy a TeamCloud instance to a specific pre-release.
-    text: az tc provider deploy --name myawesomeapp --version v0.1.1
+    text: az tc deploy --name myawesomeapp --version v0.1.1
 """
 
 helps['tc upgrade'] = """
@@ -40,7 +40,7 @@ type: command
 short-summary: Get the status of a long-running operation.
 examples:
   - name: Get the status of a TeamCloud operation like creating a new provider.
-    text: az tc status -tracking-id myTrackingIdGuid
+    text: az tc status --tracking-id myTrackingIdGuid
   - name: Get the status of a Project operation like creating a new project user.
     text: az tc status --project myProjectId --tracking-id myTrackingIdGuid
 """
