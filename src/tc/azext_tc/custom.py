@@ -336,7 +336,7 @@ def project_tag_get(cmd, client, base_url, project, tag_key):
 # Project Types
 
 def project_type_create(cmd, client, base_url, project_type, subscriptions, provider, providers,
-                        location=None, subscription_capacity=10, resource_group_name_prefix=None,
+                        location, subscription_capacity=10, resource_group_name_prefix=None,
                         tags=None, properties=None, default=False):
     from .vendored_sdks.teamcloud.models import ProjectType
     client._client.config.base_url = base_url
