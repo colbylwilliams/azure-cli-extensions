@@ -846,16 +846,19 @@ def _create_keyvault(cli_ctx, name, resource_group_name, location):
 def _create_resource_manager_sp(cmd):
     from azure.cli.command_modules.role.custom import create_service_principal_for_rbac, add_permission, admin_consent
 
-    sp = create_service_principal_for_rbac(
-        cmd, name='http://TeamCloud.ResourceManager', years=10, role='Owner')
-
+    sp = create_service_principal_for_rbac(cmd, name='http://TeamCloud.ResourceManager',
+                                           years=10, role='Owner')
+    # Azure Active Directory Graph permissions
     add_permission(cmd, identifier=sp['appId'], api='00000002-0000-0000-c000-000000000000',
-                   api_permissions=['5778995a-e1bf-45b8-affa-663a9f3f4d04=Role'])
-
+                   api_permissions=['5778995a-e1bf-45b8-affa-663a9f3f4d04=Role',  # Directory.Read.All
+                                    '824c81eb-e3f8-4ee6-8f6d-de7f50d565b7=Role'])  # Application.ReadWrite.OwnedBy
+    # Microsoft Graph permissions
     add_permission(cmd, identifier=sp['appId'], api='00000003-0000-0000-c000-000000000000',
-                   api_permissions=['e1fe6dd8-ba31-4d61-89e7-88639da4683d=Scope',
-                                    '7ab1d382-f21e-4acd-a863-ba3e13f7da61=Role',
-                                    'df021288-bdef-4463-88db-98f22de89214=Role'])
+                   api_permissions=['7ab1d382-f21e-4acd-a863-ba3e13f7da61=Role',  # Directory.Read.All
+                                    '18a4783c-866b-4cc7-a460-3d5e5662c884=Role'])  # Application.ReadWrite.OwnedBy
+
+    # 'e1fe6dd8-ba31-4d61-89e7-88639da4683d=Scope', # User.Read
+    # 'df021288-bdef-4463-88db-98f22de89214=Role', # User.Read
 
     admin_consent(cmd, identifier=sp['appId'])
 
