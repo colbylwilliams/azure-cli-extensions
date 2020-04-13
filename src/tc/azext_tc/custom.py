@@ -862,31 +862,6 @@ def _create_resource_manager_sp(cmd):
     return sp
 
 
-def _deploy_app(cli_ctx, resource_group_name, name, location, repo_url, slot=None, app_instance=None):
-    from azure.mgmt.web.models import SiteSourceControl
-    from ._client_factory import web_client_factory
-
-    web_client = web_client_factory(cli_ctx).web_apps
-
-    source_control = SiteSourceControl(location=location, repo_url=repo_url, branch='master',
-                                       is_manual_integration=True, is_mercurial=False)
-
-    # SCC config can fail if previous commands caused SCMSite shutdown, so retry here.
-    for i in range(5):
-        try:
-            poller = web_client.create_or_update_source_control(
-                resource_group_name, name, source_control)
-
-            return LongRunningOperation(cli_ctx)(poller)
-        except Exception as ex:  # pylint: disable=broad-except
-            import re
-            # for non server errors(50x), just throw; otherwise retry 4 times
-            if i == 4 or not re.findall(r'\(50\d\)', str(ex)):
-                raise
-            logger.warning('retrying %s/4', i + 1)
-            sleep(5)   # retry in a moment
-
-
 def _zip_deploy_app(cli_ctx, resource_group_name, name, repo_url, zip_name, version=None, slot=None,
                     app_instance=None, timeout=None):
     import requests
