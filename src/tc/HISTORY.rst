@@ -3,6 +3,12 @@
 Release History
 ===============
 
+0.3.1
+++++++
+* Preview release
+* az tc deploy: Fix permissions for auto-created service principal
+* az tc project-type create: Require --location
+
 0.3.0
 ++++++
 * Preview release
@@ -16,7 +22,7 @@ Release History
 * Return object instead of strings deploy/upgrade
 * Updated teamcloud python client
 * Added some options to allow redeployment using tc deploy
-* Create system Managed Identitiy for function apps
+* Create system Managed Identity for function apps
 * Allow project type names without a period
 * Removed 3+ subscriptions requirement for project types
 * Fix project type create provider validation
