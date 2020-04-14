@@ -3,6 +3,15 @@
 Release History
 ===============
 
+0.3.2
+++++++
+* Preview release
+* az tc provider deploy: Deploy providers into specific resource groups
+* az tc project user delete: Fix incorrect api path
+* Tab completion for project types and providers
+* Support --no-wait for all create/delete commands
+* Add confirmation on user, project type, and provider delete commands
+
 0.3.1
 ++++++
 * Preview release

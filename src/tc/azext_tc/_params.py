@@ -17,7 +17,7 @@ from ._validators import (
     source_version_validator, auth_code_validator, properties_validator)
 
 from ._completers import (
-    get_project_completion_list)
+    get_project_completion_list, get_project_type_completion_list, get_provider_completion_list)
 
 from ._actions import CreateProviderReference
 
@@ -104,7 +104,7 @@ def load_arguments(self, _):
                    validator=source_version_validator)
 
     with self.argument_context('tc status') as c:
-        c.argument('project', project_name_or_id_type, completer=get_project_completion_list)
+        c.argument('project', project_name_or_id_type)
         c.argument('tracking_id', options_list=['--tracking-id', '-t'],
                    type=str, help='Operation tracking id.',
                    validator=tracking_id_validator)
@@ -183,15 +183,22 @@ def load_arguments(self, _):
         with self.argument_context(scope) as c:
             c.argument('project_type', options_list=['--name', '-n'],
                        type=str, help='Project type id.',
-                       validator=project_type_id_validator_name)
+                       validator=project_type_id_validator_name,
+                       completer=get_project_type_completion_list)
 
     # Providers
 
-    for scope in ['tc provider create', 'tc provider show', 'tc provider delete']:
+    with self.argument_context('tc provider create') as c:
+        c.argument('provider', options_list=['--name', '-n'],
+                   type=str, help='Provider id.',
+                   validator=provider_id_validator)
+
+    for scope in ['tc provider show', 'tc provider delete']:
         with self.argument_context(scope) as c:
             c.argument('provider', options_list=['--name', '-n'],
                        type=str, help='Provider id.',
-                       validator=provider_id_validator)
+                       validator=provider_id_validator,
+                       completer=get_provider_completion_list)
 
     for scope in ['tc provider create', 'tc provider deploy']:
         with self.argument_context(scope) as c:
@@ -210,8 +217,7 @@ def load_arguments(self, _):
         with self.argument_context(scope) as c:
             c.argument('provider', get_enum_type(['azure.appinsights', 'azure.devops', 'azure.devtestlabs']),
                        options_list=['--name', '-n'], help='Provider id.')
-            c.argument('resource_group_name',
-                       resource_group_name_type, default='TeamCloud-Providers',
+            c.argument('resource_group_name', resource_group_name_type,
                        help='Name of resource group.')
             c.argument('version', options_list=['--version', '-v'],
                        type=str, help='Provider version. Default: latest stable.',

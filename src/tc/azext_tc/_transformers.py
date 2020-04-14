@@ -84,7 +84,6 @@ def transform_project_table_output(result):
 
 
 def transform_project_type_table_output(result):
-    logger.warning(result)
     if not isinstance(result, list):
         result = [result]
 
